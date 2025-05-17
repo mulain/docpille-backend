@@ -1,0 +1,35 @@
+{
+  "name": "docpille-backend",
+  "version": "1.0.0",
+  "description": "Appointment app backend for doctor's office",
+  "main": "src/index.ts",
+  "scripts": {
+    "dev": "NODE_ENV=dev nodemon --watch src --exec ts-node src/index.ts",
+    "test": "NODE_ENV=test exit 0",
+    "format": "prettier --write \"src/**/*.{ts,js,json}\"",
+    "format:check": "prettier --check \"src/**/*.{ts,js,json}\""
+  },
+  "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/cors": "^2.8.18",
+    "@types/express": "^5.0.2",
+    "@types/jsonwebtoken": "^9.0.9",
+    "@types/nodemailer": "^6.4.17",
+    "nodemon": "^3.1.10",
+    "prettier": "^3.5.3",
+    "reflect-metadata": "^0.2.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3"
+  },
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "express-rate-limit": "^7.5.0",
+    "jsonwebtoken": "^9.0.2",
+    "nodemailer": "^7.0.3",
+    "pg": "^8.11.3",
+    "typeorm": "^0.3.24",
+    "zod": "^3.24.4"
+  }
+}

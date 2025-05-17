@@ -1,4 +1,3 @@
-import { z } from 'zod'
 import { NotFoundError, UnauthorizedError, BadRequestError } from '../utils/errors'
 import { UserRole } from '../types/auth'
 import { hashPassword } from '../utils/auth'
@@ -6,27 +5,8 @@ import crypto from 'crypto'
 import { EmailService } from './emailService'
 import { Patient as PatientEntity } from '../entities/Patient'
 import { AppDataSource } from '../data-source'
-import { LessThan, MoreThan } from 'typeorm'
-
-// Types
-export type Patient = Omit<
-  PatientEntity,
-  'passwordHash' | 'emailVerificationToken' | 'emailVerificationExpires'
->
-
-// Validation schema
-export const patientSchema = z.object({
-  firstName: z.string().min(1, 'First name is required'),
-  lastName: z.string().min(1, 'Last name is required'),
-  dateOfBirth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
-  email: z.string().email('Invalid email address'),
-  phoneNumber: z.string().min(1, 'Phone number is required'),
-  password: z.string().min(8, 'Password must be at least 8 characters'),
-  address: z.string().optional(),
-})
-
-export type CreatePatientDTO = z.infer<typeof patientSchema>
-export type UpdatePatientDTO = Partial<CreatePatientDTO>
+import { MoreThan } from 'typeorm'
+import { Patient, CreatePatientDTO, UpdatePatientDTO, patientSchema } from '../types/patient'
 
 interface RequestUser {
   role: UserRole
@@ -36,7 +16,7 @@ interface RequestUser {
 export class PatientService {
   private patientRepository = AppDataSource.getRepository(PatientEntity)
 
-  // Patient self-registration
+  // New users can register as patients
   async registerPatient(data: CreatePatientDTO): Promise<Patient> {
     const existingPatient = await this.patientRepository.findOne({ where: { email: data.email } })
     if (existingPatient) {
@@ -46,7 +26,7 @@ export class PatientService {
     const passwordHash = await hashPassword(data.password)
 
     const emailVerificationToken = crypto.randomBytes(32).toString('hex')
-    const emailVerificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
+    const emailVerificationExpires = new Date(Date.now() + 1 * 60 * 60 * 1000) // 1 hour
 
     const patient = this.patientRepository.create({
       ...data,
@@ -88,9 +68,11 @@ export class PatientService {
       throw new BadRequestError('Invalid or expired verification token')
     }
 
+    // Update verification status
     patient.isEmailVerified = true
-    patient.emailVerificationToken = undefined
-    patient.emailVerificationExpires = undefined
+    patient.verifiedAt = new Date()
+    patient.emailVerificationToken = null
+    patient.emailVerificationExpires = null
 
     await this.patientRepository.save(patient)
   }

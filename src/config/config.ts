@@ -1,7 +1,6 @@
 import 'dotenv/config'
 import { z } from 'zod'
 
-// Define the possible environment types
 const NodeEnv = z.enum(['dev', 'test', 'prod'])
 type NodeEnv = z.infer<typeof NodeEnv>
 
@@ -32,10 +31,8 @@ interface Config {
   email: EmailConfig
 }
 
-// Get and validate NODE_ENV first as it determines other requirements
 const nodeEnv = NodeEnv.parse(process.env.NODE_ENV)
 
-// Define required environment variables based on NODE_ENV
 const getRequiredEnvVars = (env: NodeEnv): string[] => {
   const baseVars = [
     'PORT',
@@ -48,12 +45,10 @@ const getRequiredEnvVars = (env: NodeEnv): string[] => {
     'FROM_EMAIL',
   ]
 
-  // Add the environment-specific database URI
   const databaseVar = `${env.toUpperCase()}_DATABASE_URI`
   return [...baseVars, databaseVar]
 }
 
-// Validate required environment variables
 const requiredEnvVars = getRequiredEnvVars(nodeEnv)
 for (const envVar of requiredEnvVars) {
   if (!process.env[envVar]) {
@@ -63,7 +58,6 @@ for (const envVar of requiredEnvVars) {
 
 const port = Number(process.env.PORT!)
 
-// Get the appropriate database URI based on environment
 const getDatabaseUri = (env: NodeEnv): string => {
   const uri = process.env[`${env.toUpperCase()}_DATABASE_URI`]
   if (!uri) {

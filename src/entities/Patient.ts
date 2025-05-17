@@ -37,11 +37,14 @@ export class Patient {
   @Column({ default: false })
   isEmailVerified!: boolean
 
-  @Column({ nullable: true })
-  emailVerificationToken?: string
+  @Column({ type: 'varchar', nullable: true })
+  emailVerificationToken?: string | null
 
-  @Column({ nullable: true })
-  emailVerificationExpires?: Date
+  @Column({ type: 'timestamp', nullable: true })
+  emailVerificationExpires?: Date | null
+
+  @Column({ type: 'timestamp', nullable: true })
+  verifiedAt?: Date | null
 
   @CreateDateColumn()
   createdAt!: Date

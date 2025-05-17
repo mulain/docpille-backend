@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
-import { PatientService, patientSchema } from '../services/patientService'
+import { PatientService } from '../services/patientService'
+import { patientSchema } from '../types/patient'
 //import { UnauthorizedError } from '../utils/errors'
 
 const patientService = new PatientService()

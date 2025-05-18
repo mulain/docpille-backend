@@ -6,6 +6,7 @@ import cors from 'cors'
 import patientRoutes from './routes/patientRoutes'
 import authRoutes from './routes/authRoutes'
 import { AppDataSource } from './data-source'
+import config from './config/config'
 //import { errorHandler } from './middleware/errorHandler'
 
 const app = express()
@@ -27,17 +28,21 @@ app.get('/health', (req, res) => {
 // app.use(errorHandler)
 
 export async function initialize() {
-  console.log('Attempting to initialize database connection...')
+  console.log('Initializing database connection...')
+  console.log(`Environment: ${config.nodeEnv}`)
+  console.log(`Database: ${config.database.name}`)
+  console.log(`Synchronize: ${config.database.synchronize}`)
+
   try {
     await AppDataSource.initialize()
-    console.log('✅ Database connection initialized successfully')
+    console.log(`✅ Database connected: ${config.database.name}`)
     console.log(
       'Connected entities:',
       AppDataSource.entityMetadatas.map(entity => entity.name).join(', ')
     )
     return app
   } catch (error) {
-    console.error('❌ Error initializing database connection:')
+    console.error(`❌ Error connecting to: ${config.database.name}`)
     console.error(error)
     throw error
   }

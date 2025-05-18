@@ -1,5 +1,4 @@
 import nodemailer from 'nodemailer'
-import rateLimit from 'express-rate-limit'
 import path from 'path'
 import fs from 'fs/promises'
 import config from '../config/config'
@@ -13,13 +12,6 @@ const transporter = nodemailer.createTransport({
     user: config.email.user,
     pass: config.email.pass,
   },
-})
-
-// Rate limiter for email sending - 3 attempts per IP per hour
-export const emailRateLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3, // 3 attempts
-  message: 'Too many email verification attempts. Please try again in an hour.',
 })
 
 export class EmailService {
@@ -46,7 +38,7 @@ export class EmailService {
   ): Promise<void> {
     try {
       const template = await this.loadTemplate('verification')
-      const verificationUrl = `http://localhost:3000/api/patients/verify-email?token=${token}`
+      const verificationUrl = `http://localhost:3000/api/auth/verify-email?token=${token}`
 
       const compiledHtml = await this.compileTemplate(template, {
         firstName,

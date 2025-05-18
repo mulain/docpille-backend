@@ -6,6 +6,7 @@ type NodeEnv = z.infer<typeof NodeEnv>
 
 interface DatabaseConfig {
   uri: string
+  name: string
   synchronize: boolean
   logging: boolean
 }
@@ -66,11 +67,24 @@ const getDatabaseUri = (env: NodeEnv): string => {
   return uri
 }
 
+const extractDatabaseName = (uri: string): string => {
+  try {
+    const url = new URL(uri)
+    // Remove leading slash from pathname
+    return url.pathname.slice(1)
+  } catch (error) {
+    throw new Error(`Invalid database URI format: ${uri}`)
+  }
+}
+
+const databaseUri = getDatabaseUri(nodeEnv)
+
 const config: Config = {
   nodeEnv,
   port,
   database: {
-    uri: getDatabaseUri(nodeEnv),
+    uri: databaseUri,
+    name: extractDatabaseName(databaseUri),
     synchronize: nodeEnv === 'dev',
     logging: nodeEnv === 'dev',
   },

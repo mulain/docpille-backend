@@ -3,15 +3,15 @@ import { Router } from 'express'
 // local imports
 import { patientController } from '../controllers/patientController'
 import { asyncHandler } from '../utils/asyncHandler'
-import { emailRateLimiter } from '../services/emailService'
+import { emailVerificationLimiter } from '../middleware/rateLimiter'
 
 const router = Router()
 
 router.post('/register', asyncHandler(patientController.registerPatient))
-router.get('/verify-email', emailRateLimiter, asyncHandler(patientController.verifyEmail))
+router.get('/verify-email', emailVerificationLimiter, asyncHandler(patientController.verifyEmail))
 router.post(
   '/resend-verification',
-  emailRateLimiter,
+  emailVerificationLimiter,
   asyncHandler(patientController.resendVerificationEmail)
 )
 

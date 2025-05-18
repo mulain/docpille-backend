@@ -1,12 +1,14 @@
+import crypto from 'crypto'
+import { MoreThan } from 'typeorm'
+
+// local imports
 import { NotFoundError, UnauthorizedError, BadRequestError } from '../utils/errors'
 import { UserRole } from '../types/auth'
 import { hashPassword } from '../utils/auth'
-import crypto from 'crypto'
 import { EmailService } from './emailService'
 import { Patient as PatientEntity } from '../entities/Patient'
 import { AppDataSource } from '../data-source'
-import { MoreThan } from 'typeorm'
-import { Patient, CreatePatientDTO, UpdatePatientDTO, patientSchema } from '../types/patient'
+import { Patient, CreatePatientDTO, UpdatePatientDTO } from '../types/patient'
 
 interface RequestUser {
   role: UserRole
@@ -55,7 +57,7 @@ export class PatientService {
     return patientResponse
   }
 
-  async verifyEmail(token: string): Promise<void> {
+  async verifyEmail(token: string): Promise<{ success: boolean; message: string }> {
     const patient = await this.patientRepository.findOne({
       where: {
         emailVerificationToken: token,
@@ -75,6 +77,38 @@ export class PatientService {
     patient.emailVerificationExpires = null
 
     await this.patientRepository.save(patient)
+    return { success: true, message: 'Email verified successfully' }
+  }
+
+  async resendVerificationToken(email: string): Promise<{ success: boolean; message: string }> {
+    const patient = await this.patientRepository.findOne({ where: { email } })
+
+    if (!patient) {
+      throw new BadRequestError('Patient not found')
+    }
+
+    if (patient.isEmailVerified) {
+      throw new BadRequestError('Email is already verified')
+    }
+
+    // Generate new verification token
+    const emailVerificationToken = crypto.randomBytes(32).toString('hex')
+    const emailVerificationExpires = new Date(Date.now() + 1 * 60 * 60 * 1000) // 1 hour
+
+    patient.emailVerificationToken = emailVerificationToken
+    patient.emailVerificationExpires = emailVerificationExpires
+
+    await this.patientRepository.save(patient)
+    await EmailService.sendVerificationEmail(
+      patient.email,
+      emailVerificationToken,
+      patient.firstName
+    )
+
+    return {
+      success: true,
+      message: 'Verification email sent successfully. Please check your inbox.',
+    }
   }
 
   // Get all patients - Only accessible by medical staff

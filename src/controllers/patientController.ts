@@ -1,7 +1,9 @@
 import { Request, Response } from 'express'
+
+// local imports
 import { PatientService } from '../services/patientService'
 import { patientSchema } from '../types/patient'
-//import { UnauthorizedError } from '../utils/errors'
+import { BadRequestError } from '../utils/errors'
 
 const patientService = new PatientService()
 
@@ -16,16 +18,46 @@ export const patientController = {
     })
   },
 
-  // Verify email
   verifyEmail: async (req: Request, res: Response) => {
     const { token } = req.query
 
     if (typeof token !== 'string') {
-      res.status(400).json({ message: 'Invalid verification token' })
+      res.status(400).json({ success: false, message: 'Invalid verification token' })
       return
     }
 
-    await patientService.verifyEmail(token)
-    res.json({ message: 'Email verified successfully. You can now log in.' })
+    try {
+      const result = await patientService.verifyEmail(token)
+      res.json(result)
+    } catch (error) {
+      if (error instanceof BadRequestError) {
+        res.status(400).json({ success: false, message: error.message })
+      } else {
+        res.status(500).json({ success: false, message: 'Verification failed' })
+      }
+    }
+  },
+
+  resendVerificationEmail: async (req: Request, res: Response) => {
+    const { email } = req.body
+
+    if (typeof email !== 'string') {
+      res.status(400).json({ success: false, message: 'Email is required' })
+      return
+    }
+
+    try {
+      const result = await patientService.resendVerificationToken(email)
+      res.json(result)
+    } catch (error) {
+      if (error instanceof BadRequestError) {
+        res.status(400).json({ success: false, message: error.message })
+      } else {
+        res.status(500).json({
+          success: false,
+          message: 'Failed to resend verification email',
+        })
+      }
+    }
   },
 }

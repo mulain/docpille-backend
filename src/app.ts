@@ -1,7 +1,10 @@
 import 'reflect-metadata'
 import express from 'express'
 import cors from 'cors'
-import patientRoutes from './routes/patients'
+
+// local imports
+import patientRoutes from './routes/patientRoutes'
+import authRoutes from './routes/authRoutes'
 import { AppDataSource } from './data-source'
 //import { errorHandler } from './middleware/errorHandler'
 
@@ -12,6 +15,7 @@ app.use(cors())
 app.use(express.json())
 
 // Routes
+app.use('/api/auth', authRoutes)
 app.use('/api/patients', patientRoutes)
 
 // Health check endpoint

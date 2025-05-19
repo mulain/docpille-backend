@@ -30,6 +30,7 @@ interface Config {
   database: DatabaseConfig
   jwt: JWTConfig
   email: EmailConfig
+  frontendUrl: string
 }
 
 const nodeEnv = NodeEnv.parse(process.env.NODE_ENV)
@@ -37,6 +38,7 @@ const nodeEnv = NodeEnv.parse(process.env.NODE_ENV)
 const getRequiredEnvVars = (env: NodeEnv): string[] => {
   const baseVars = [
     'PORT',
+    'FRONTEND_URL',
     'JWT_SECRET',
     'JWT_EXPIRES_IN',
     'SMTP_HOST',
@@ -99,6 +101,7 @@ const config: Config = {
     pass: process.env.SMTP_PASS!,
     fromEmail: process.env.FROM_EMAIL!,
   },
+  frontendUrl: process.env.FRONTEND_URL!,
 }
 
 export default config

@@ -5,9 +5,10 @@ import cors from 'cors'
 // local imports
 import patientRoutes from './routes/patientRoutes'
 import authRoutes from './routes/authRoutes'
+import registerRoutes from './routes/registerRoutes'
 import { AppDataSource } from './data-source'
 import config from './config/config'
-//import { errorHandler } from './middleware/errorHandler'
+import { errorHandler } from './middleware/errorHandler'
 
 const app = express()
 
@@ -15,9 +16,10 @@ const app = express()
 app.use(cors())
 app.use(express.json())
 
-// Routes
-app.use('/api/auth', authRoutes)
-app.use('/api/patients', patientRoutes)
+// API Routes
+app.use('/api/v1/auth', authRoutes)
+app.use('/api/v1/register', registerRoutes)
+app.use('/api/v1/patients', patientRoutes)
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -25,7 +27,7 @@ app.get('/health', (req, res) => {
 })
 
 // Error handling
-// app.use(errorHandler)
+app.use(errorHandler)
 
 export async function initialize() {
   console.log('Initializing database connection...')
@@ -47,3 +49,5 @@ export async function initialize() {
     throw error
   }
 }
+
+export default app

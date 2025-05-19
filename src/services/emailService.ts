@@ -88,7 +88,7 @@ export class EmailService {
   ): Promise<void> {
     try {
       const template = await this.loadTemplate('verification')
-      const verificationUrl = `http://localhost:3000/api/auth/verify-email?token=${token}`
+      const verificationUrl = `${config.frontendUrl}/verify-email?token=${token}`
 
       const compiledHtml = await this.compileTemplate(template, {
         firstName,

@@ -18,15 +18,15 @@ export class Patient {
   @Column()
   lastName!: string
 
-  @Column()
-  dateOfBirth!: string
+  @Column({ nullable: true })
+  dateOfBirth?: string
 
   @Column()
   @Index({ unique: true })
   email!: string
 
-  @Column()
-  phoneNumber!: string
+  @Column({ nullable: true })
+  phoneNumber?: string
 
   @Column()
   passwordHash!: string

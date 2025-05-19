@@ -1,11 +1,7 @@
-import crypto from 'crypto'
-import { MoreThan } from 'typeorm'
 import { AppDataSource } from '../data-source'
 import { Patient as PatientEntity } from '../entities/Patient'
 import { BadRequestError, UnauthorizedError, NotFoundError } from '../utils/errors'
 import { UserRole } from '../types/auth'
-import { hashPassword } from '../utils/auth'
-import { EmailService } from './emailService'
 import { patientSchema, Patient, UpdatePatientDTO } from '../types/patient'
 
 interface RequestUser {

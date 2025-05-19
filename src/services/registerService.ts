@@ -4,7 +4,7 @@ import { AppDataSource } from '../data-source'
 import { Patient as PatientEntity } from '../entities/Patient'
 import { BadRequestError } from '../utils/errors'
 import { hashPassword } from '../utils/auth'
-import { EmailService } from './emailService'
+import { emailService } from './emailService'
 import { patientSchema, Patient, CreatePatientDTO } from '../types/patient'
 import { logger } from '../utils/logger'
 
@@ -33,7 +33,7 @@ export const registerService = {
     await patientRepository.save(patient)
     logger.info('New patient registered', { email: data.email })
 
-    await EmailService.sendVerificationEmail(
+    await emailService.sendVerificationEmail(
       patient.email,
       emailVerificationToken,
       patient.firstName
@@ -93,7 +93,7 @@ export const registerService = {
     patient.emailVerificationExpires = emailVerificationExpires
 
     await patientRepository.save(patient)
-    await EmailService.sendVerificationEmail(
+    await emailService.sendVerificationEmail(
       patient.email,
       emailVerificationToken,
       patient.firstName

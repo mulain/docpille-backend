@@ -1,5 +1,7 @@
 import { Request, Response } from 'express'
 import { z } from 'zod'
+
+// local imports
 import { registerService } from '../services/registerService'
 import { BadRequestError } from '../utils/errors'
 

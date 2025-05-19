@@ -1,11 +1,13 @@
 import crypto from 'crypto'
 import { MoreThan } from 'typeorm'
+
+// local imports
 import { AppDataSource } from '../data-source'
 import { Patient as PatientEntity } from '../entities/Patient'
 import { BadRequestError } from '../utils/errors'
 import { hashPassword } from '../utils/auth'
 import { emailService } from './emailService'
-import { patientSchema, Patient, CreatePatientDTO } from '../types/patient'
+import { Patient, CreatePatientDTO } from '../types/patient'
 import { logger } from '../utils/logger'
 
 const patientRepository = AppDataSource.getRepository(PatientEntity)
@@ -14,6 +16,7 @@ export const registerService = {
   async registerPatient(data: CreatePatientDTO): Promise<Patient> {
     const existingPatient = await patientRepository.findOne({ where: { email: data.email } })
     if (existingPatient) {
+      logger.info('Email already registered', { email: data.email })
       throw new BadRequestError('Email already registered')
     }
 
@@ -60,6 +63,7 @@ export const registerService = {
     })
 
     if (!patient) {
+      logger.info('Invalid or expired verification token', { token })
       throw new BadRequestError('Invalid or expired verification token')
     }
 
@@ -70,7 +74,7 @@ export const registerService = {
     patient.emailVerificationExpires = null
 
     await patientRepository.save(patient)
-    logger.info('Email verified', { email: patient.email })
+    logger.info('Email verified', { email: patient.email }, { patientId: patient.id })
     return { success: true, message: 'Email verified successfully' }
   },
 
@@ -78,10 +82,12 @@ export const registerService = {
     const patient = await patientRepository.findOne({ where: { email } })
 
     if (!patient) {
+      logger.info('Patient not found', { email })
       throw new BadRequestError('Patient not found')
     }
 
     if (patient.isEmailVerified) {
+      logger.info('Email already verified', { email })
       throw new BadRequestError('Email is already verified')
     }
 

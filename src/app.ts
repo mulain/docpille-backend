@@ -9,12 +9,14 @@ import registerRoutes from './routes/registerRoutes'
 import { AppDataSource } from './data-source'
 import config from './config/config'
 import { errorHandler } from './middleware/errorHandler'
+import { requestLogger } from './middleware/requestLogger'
 
 const app = express()
 
 // Middleware
 app.use(cors())
 app.use(express.json())
+app.use(requestLogger)
 
 // API Routes
 app.use('/api/v1/auth', authRoutes)

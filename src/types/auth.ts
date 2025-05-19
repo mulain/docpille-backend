@@ -4,12 +4,10 @@ export enum UserRole {
   ADMIN = 'admin',
 }
 
-export interface JWTPayload {
-  userId: string
+export interface JwtPayload {
+  id: string
   email: string
   role: UserRole
-  // Add additional claims if needed (e.g., doctorId or patientId based on role)
-  entityId?: string // The ID of the doctor/patient this user is associated with
 }
 
 export interface AuthUser {

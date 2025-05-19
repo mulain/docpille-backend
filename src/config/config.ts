@@ -13,7 +13,6 @@ interface DatabaseConfig {
 
 interface JWTConfig {
   secret: string
-  expiresIn: string
 }
 
 interface EmailConfig {
@@ -40,7 +39,6 @@ const getRequiredEnvVars = (env: NodeEnv): string[] => {
     'PORT',
     'FRONTEND_URL',
     'JWT_SECRET',
-    'JWT_EXPIRES_IN',
     'SMTP_HOST',
     'SMTP_PORT',
     'SMTP_USER',
@@ -92,7 +90,6 @@ const config: Config = {
   },
   jwt: {
     secret: process.env.JWT_SECRET!,
-    expiresIn: process.env.JWT_EXPIRES_IN!,
   },
   email: {
     host: process.env.SMTP_HOST!,

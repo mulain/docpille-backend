@@ -1,0 +1,107 @@
+import crypto from 'crypto'
+import { MoreThan } from 'typeorm'
+import { AppDataSource } from '../data-source'
+import { Patient as PatientEntity } from '../entities/Patient'
+import { BadRequestError } from '../utils/errors'
+import { hashPassword } from '../utils/auth'
+import { EmailService } from './emailService'
+import { patientSchema, Patient, CreatePatientDTO } from '../types/patient'
+import { logger } from '../utils/logger'
+
+const patientRepository = AppDataSource.getRepository(PatientEntity)
+
+export const registerService = {
+  async registerPatient(data: CreatePatientDTO): Promise<Patient> {
+    const existingPatient = await patientRepository.findOne({ where: { email: data.email } })
+    if (existingPatient) {
+      throw new BadRequestError('Email already registered')
+    }
+
+    const passwordHash = await hashPassword(data.password)
+
+    const emailVerificationToken = crypto.randomBytes(32).toString('hex')
+    const emailVerificationExpires = new Date(Date.now() + 1 * 60 * 60 * 1000) // 1 hour
+
+    const patient = patientRepository.create({
+      ...data,
+      passwordHash,
+      isEmailVerified: false,
+      emailVerificationToken,
+      emailVerificationExpires,
+    })
+
+    await patientRepository.save(patient)
+    logger.info('New patient registered', { email: data.email })
+
+    await EmailService.sendVerificationEmail(
+      patient.email,
+      emailVerificationToken,
+      patient.firstName
+    )
+
+    // Remove sensitive data from response
+    const {
+      passwordHash: _,
+      emailVerificationToken: __,
+      emailVerificationExpires: ___,
+      ...patientResponse
+    } = patient
+
+    return patientResponse
+  },
+
+  async verifyEmail(token: string): Promise<{ success: boolean; message: string }> {
+    const patient = await patientRepository.findOne({
+      where: {
+        emailVerificationToken: token,
+        emailVerificationExpires: MoreThan(new Date()),
+        isEmailVerified: false,
+      },
+    })
+
+    if (!patient) {
+      throw new BadRequestError('Invalid or expired verification token')
+    }
+
+    // Update verification status
+    patient.isEmailVerified = true
+    patient.verifiedAt = new Date()
+    patient.emailVerificationToken = null
+    patient.emailVerificationExpires = null
+
+    await patientRepository.save(patient)
+    logger.info('Email verified', { email: patient.email })
+    return { success: true, message: 'Email verified successfully' }
+  },
+
+  async resendVerificationToken(email: string): Promise<{ success: boolean; message: string }> {
+    const patient = await patientRepository.findOne({ where: { email } })
+
+    if (!patient) {
+      throw new BadRequestError('Patient not found')
+    }
+
+    if (patient.isEmailVerified) {
+      throw new BadRequestError('Email is already verified')
+    }
+
+    // Generate new verification token
+    const emailVerificationToken = crypto.randomBytes(32).toString('hex')
+    const emailVerificationExpires = new Date(Date.now() + 1 * 60 * 60 * 1000) // 1 hour
+
+    patient.emailVerificationToken = emailVerificationToken
+    patient.emailVerificationExpires = emailVerificationExpires
+
+    await patientRepository.save(patient)
+    await EmailService.sendVerificationEmail(
+      patient.email,
+      emailVerificationToken,
+      patient.firstName
+    )
+    logger.info('Verification email resent', { email })
+    return {
+      success: true,
+      message: 'Verification email sent successfully. Please check your inbox.',
+    }
+  },
+}

@@ -1,192 +1,121 @@
 import crypto from 'crypto'
 import { MoreThan } from 'typeorm'
-
-// local imports
-import { NotFoundError, UnauthorizedError, BadRequestError } from '../utils/errors'
+import { AppDataSource } from '../data-source'
+import { Patient as PatientEntity } from '../entities/Patient'
+import { BadRequestError, UnauthorizedError, NotFoundError } from '../utils/errors'
 import { UserRole } from '../types/auth'
 import { hashPassword } from '../utils/auth'
 import { EmailService } from './emailService'
-import { Patient as PatientEntity } from '../entities/Patient'
-import { AppDataSource } from '../data-source'
-import { Patient, CreatePatientDTO, UpdatePatientDTO } from '../types/patient'
+import { patientSchema, Patient, UpdatePatientDTO } from '../types/patient'
 
 interface RequestUser {
   role: UserRole
   entityId?: string
 }
 
+const patientRepository = AppDataSource.getRepository(PatientEntity)
+
 export class PatientService {
-  private patientRepository = AppDataSource.getRepository(PatientEntity)
-
-  // New users can register as patients
-  async registerPatient(data: CreatePatientDTO): Promise<Patient> {
-    const existingPatient = await this.patientRepository.findOne({ where: { email: data.email } })
-    if (existingPatient) {
-      throw new BadRequestError('Email already registered')
+  // Get all patients - Only accessible by medical staff
+  async getAllPatients(user: { role: UserRole }): Promise<Patient[]> {
+    if (user.role !== UserRole.DOCTOR) {
+      throw new UnauthorizedError('Only medical staff can view all patients')
     }
-
-    const passwordHash = await hashPassword(data.password)
-
-    const emailVerificationToken = crypto.randomBytes(32).toString('hex')
-    const emailVerificationExpires = new Date(Date.now() + 1 * 60 * 60 * 1000) // 1 hour
-
-    const patient = this.patientRepository.create({
-      ...data,
-      passwordHash,
-      isEmailVerified: false,
-      emailVerificationToken,
-      emailVerificationExpires,
-    })
-
-    await this.patientRepository.save(patient)
-
-    await EmailService.sendVerificationEmail(
-      patient.email,
-      emailVerificationToken,
-      patient.firstName
-    )
-
-    // Remove sensitive data from response
-    const {
-      passwordHash: _,
-      emailVerificationToken: __,
-      emailVerificationExpires: ___,
-      ...patientResponse
-    } = patient
-
-    return patientResponse
+    const patients = await patientRepository.find()
+    return patients.map(patient => ({
+      id: patient.id,
+      firstName: patient.firstName,
+      lastName: patient.lastName,
+      dateOfBirth: patient.dateOfBirth,
+      email: patient.email,
+      phoneNumber: patient.phoneNumber,
+      address: patient.address,
+      isEmailVerified: patient.isEmailVerified,
+      verifiedAt: patient.verifiedAt,
+      createdAt: patient.createdAt,
+      updatedAt: patient.updatedAt,
+    }))
   }
 
-  async verifyEmail(token: string): Promise<{ success: boolean; message: string }> {
-    const patient = await this.patientRepository.findOne({
-      where: {
-        emailVerificationToken: token,
-        emailVerificationExpires: MoreThan(new Date()),
-        isEmailVerified: false,
-      },
-    })
-
-    if (!patient) {
-      throw new BadRequestError('Invalid or expired verification token')
-    }
-
-    // Update verification status
-    patient.isEmailVerified = true
-    patient.verifiedAt = new Date()
-    patient.emailVerificationToken = null
-    patient.emailVerificationExpires = null
-
-    await this.patientRepository.save(patient)
-    return { success: true, message: 'Email verified successfully' }
-  }
-
-  async resendVerificationToken(email: string): Promise<{ success: boolean; message: string }> {
-    const patient = await this.patientRepository.findOne({ where: { email } })
-
+  // Get patient by ID - Only accessible by the patient themselves or medical staff
+  async getPatientById(id: string, user: { role: UserRole; entityId?: string }): Promise<Patient> {
+    const patient = await patientRepository.findOne({ where: { id } })
     if (!patient) {
       throw new BadRequestError('Patient not found')
     }
 
-    if (patient.isEmailVerified) {
-      throw new BadRequestError('Email is already verified')
+    if (user.role !== UserRole.DOCTOR && user.entityId !== id) {
+      throw new UnauthorizedError('You can only view your own patient profile')
     }
-
-    // Generate new verification token
-    const emailVerificationToken = crypto.randomBytes(32).toString('hex')
-    const emailVerificationExpires = new Date(Date.now() + 1 * 60 * 60 * 1000) // 1 hour
-
-    patient.emailVerificationToken = emailVerificationToken
-    patient.emailVerificationExpires = emailVerificationExpires
-
-    await this.patientRepository.save(patient)
-    await EmailService.sendVerificationEmail(
-      patient.email,
-      emailVerificationToken,
-      patient.firstName
-    )
 
     return {
-      success: true,
-      message: 'Verification email sent successfully. Please check your inbox.',
+      id: patient.id,
+      firstName: patient.firstName,
+      lastName: patient.lastName,
+      dateOfBirth: patient.dateOfBirth,
+      email: patient.email,
+      phoneNumber: patient.phoneNumber,
+      address: patient.address,
+      isEmailVerified: patient.isEmailVerified,
+      verifiedAt: patient.verifiedAt,
+      createdAt: patient.createdAt,
+      updatedAt: patient.updatedAt,
     }
-  }
-
-  // Get all patients - Only accessible by medical staff
-  async getAllPatients(user: RequestUser): Promise<Patient[]> {
-    if (user.role === UserRole.PATIENT) {
-      throw new UnauthorizedError('Unauthorized to view all patients')
-    }
-
-    const patients = await this.patientRepository.find()
-    return patients.map(
-      ({ passwordHash, emailVerificationToken, emailVerificationExpires, ...patient }) => patient
-    )
-  }
-
-  // Get patient by ID - Only accessible by the patient themselves or medical staff
-  async getPatientById(id: string, user: RequestUser): Promise<Patient> {
-    // Verify access rights
-    this.verifyAccess(id, user)
-
-    const patient = await this.patientRepository.findOne({ where: { id } })
-    if (!patient) {
-      throw new NotFoundError('Patient not found')
-    }
-
-    const { passwordHash, emailVerificationToken, emailVerificationExpires, ...patientResponse } =
-      patient
-    return patientResponse
   }
 
   // Update patient - Patients can update their own basic info, medical staff can update everything
-  async updatePatient(id: string, data: UpdatePatientDTO, user: RequestUser): Promise<Patient> {
-    // First verify the patient exists
-    const patient = await this.patientRepository.findOne({ where: { id } })
+  async updatePatient(
+    id: string,
+    data: UpdatePatientDTO,
+    user: { role: UserRole; entityId?: string }
+  ): Promise<Patient> {
+    const patient = await patientRepository.findOne({ where: { id } })
     if (!patient) {
-      throw new NotFoundError('Patient not found')
+      throw new BadRequestError('Patient not found')
     }
 
-    // Verify access rights
-    this.verifyAccess(id, user)
-
-    // If the user is a patient (not medical staff), restrict what fields they can update
-    if (user.role === UserRole.PATIENT) {
-      const allowedFields: (keyof Patient)[] = ['phoneNumber', 'address']
-
-      // Check if trying to update restricted fields
-      const attemptedFields = Object.keys(data)
-      const restrictedUpdate = attemptedFields.some(
-        field => !allowedFields.includes(field as keyof Patient)
-      )
-
-      if (restrictedUpdate) {
-        throw new UnauthorizedError(
-          'Patients can only update their contact information and emergency contact'
-        )
-      }
+    if (user.role !== UserRole.DOCTOR && user.entityId !== id) {
+      throw new UnauthorizedError('You can only update your own patient profile')
     }
 
-    // Update patient
-    Object.assign(patient, data)
-    const updatedPatient = await this.patientRepository.save(patient)
+    // If patient is updating their own profile, only allow basic info updates
+    if (user.role !== UserRole.DOCTOR) {
+      const { firstName, lastName } = patientSchema.parse(data)
+      Object.assign(patient, { firstName, lastName })
+    } else {
+      // Medical staff can update all fields
+      const validatedData = patientSchema.parse(data)
+      Object.assign(patient, validatedData)
+    }
 
-    const { passwordHash, emailVerificationToken, emailVerificationExpires, ...patientResponse } =
-      updatedPatient
-    return patientResponse
+    const updatedPatient = await patientRepository.save(patient)
+    return {
+      id: updatedPatient.id,
+      firstName: updatedPatient.firstName,
+      lastName: updatedPatient.lastName,
+      dateOfBirth: updatedPatient.dateOfBirth,
+      email: updatedPatient.email,
+      phoneNumber: updatedPatient.phoneNumber,
+      address: updatedPatient.address,
+      isEmailVerified: updatedPatient.isEmailVerified,
+      verifiedAt: updatedPatient.verifiedAt,
+      createdAt: updatedPatient.createdAt,
+      updatedAt: updatedPatient.updatedAt,
+    }
   }
 
-  // Delete patient - Only accessible by admin
-  async deletePatient(id: string, user: RequestUser): Promise<void> {
-    if (user.role !== UserRole.ADMIN) {
-      throw new UnauthorizedError('Only administrators can delete patients')
+  // Delete patient - Only accessible by medical staff
+  async deletePatient(id: string, user: { role: UserRole }): Promise<void> {
+    if (user.role !== UserRole.DOCTOR) {
+      throw new UnauthorizedError('Only medical staff can delete patients')
     }
 
-    const patient = await this.patientRepository.findOne({ where: { id } })
+    const patient = await patientRepository.findOne({ where: { id } })
     if (!patient) {
       throw new NotFoundError('Patient not found')
     }
 
-    await this.patientRepository.remove(patient)
+    await patientRepository.remove(patient)
   }
 
   // Get patient's appointments - Only accessible by the patient themselves or medical staff

@@ -32,7 +32,7 @@ app.get('/health', (req, res) => {
 app.use(errorHandler)
 
 export async function initialize() {
-  console.log('Initializing database connection...')
+  console.log(`Frontend URL: ${config.frontendUrl}`)
   console.log(`Environment: ${config.nodeEnv}`)
   console.log(`Database: ${config.database.name}`)
   console.log(`Synchronize: ${config.database.synchronize}`)

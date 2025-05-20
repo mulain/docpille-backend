@@ -32,7 +32,11 @@ const compileTemplate = async (
 }
 
 export const emailService = {
-  async sendVerificationEmail(email: string, token: string, firstName: string): Promise<void> {
+  async sendVerificationEmail(
+    email: string,
+    token: string,
+    firstName: string
+  ): Promise<void> {
     try {
       const template = await loadTemplate('verification')
       const verificationUrl = `${config.frontendUrl}/verify-email?token=${token}`
@@ -55,7 +59,6 @@ export const emailService = {
       logger.info('Verification email sent successfully', { email })
     } catch (error) {
       logger.error('Failed to send verification email', { email, error })
-      throw new Error('Failed to send verification email')
     }
-  }
+  },
 }

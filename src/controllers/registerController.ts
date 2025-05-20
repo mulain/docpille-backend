@@ -15,6 +15,13 @@ const registerSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
 })
 
+const resendVerificationSchema = z.object({
+  email: z
+    .string()
+    .email('Invalid email address')
+    .transform(val => val.toLowerCase()),
+})
+
 export const registerController = {
   async register(req: Request, res: Response) {
     try {
@@ -50,18 +57,17 @@ export const registerController = {
 
   async resendVerification(req: Request, res: Response) {
     try {
-      const { email } = req.body
-      if (typeof email !== 'string') {
-        throw new BadRequestError('Email is required')
-      }
-
+      const { email } = resendVerificationSchema.parse(req.body)
       await registerService.resendVerificationToken(email)
-      res.json({ success: true, message: 'Verification email sent' })
+      res.json({
+        message:
+          'If your email is registered and not verified, you will receive a verification email.',
+      })
     } catch (error) {
-      if (error instanceof BadRequestError) {
-        res.status(400).json({ success: false, message: error.message })
+      if (error instanceof z.ZodError) {
+        res.status(400).json({ message: error.errors[0].message })
       } else {
-        res.status(500).json({ success: false, message: 'Failed to resend verification email' })
+        res.status(500).json({ message: 'An error occurred' })
       }
     }
   },

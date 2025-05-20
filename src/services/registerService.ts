@@ -12,6 +12,12 @@ import { logger } from '../utils/logger'
 
 const patientRepository = AppDataSource.getRepository(PatientEntity)
 
+const generateVerificationToken = () => {
+  const token = crypto.randomBytes(32).toString('hex')
+  const expires = new Date(Date.now() + 1 * 60 * 60 * 1000) // 1 hour
+  return { token, expires }
+}
+
 export const registerService = {
   async registerPatient(data: CreatePatientDTO): Promise<Patient> {
     const existingPatient = await patientRepository.findOne({ where: { email: data.email } })
@@ -21,26 +27,20 @@ export const registerService = {
     }
 
     const passwordHash = await hashPassword(data.password)
-
-    const emailVerificationToken = crypto.randomBytes(32).toString('hex')
-    const emailVerificationExpires = new Date(Date.now() + 1 * 60 * 60 * 1000) // 1 hour
+    const { token, expires } = generateVerificationToken()
 
     const patient = patientRepository.create({
       ...data,
       passwordHash,
       isEmailVerified: false,
-      emailVerificationToken,
-      emailVerificationExpires,
+      emailVerificationToken: token,
+      emailVerificationExpires: expires,
     })
 
     await patientRepository.save(patient)
     logger.info('New patient registered', { email: data.email })
 
-    await emailService.sendVerificationEmail(
-      patient.email,
-      emailVerificationToken,
-      patient.firstName
-    )
+    await emailService.sendVerificationEmail(patient.email, token, patient.firstName)
 
     // Remove sensitive data from response
     const {
@@ -78,36 +78,25 @@ export const registerService = {
     return { success: true, message: 'Email verified successfully' }
   },
 
-  async resendVerificationToken(email: string): Promise<{ success: boolean; message: string }> {
+  async resendVerificationToken(email: string): Promise<void> {
     const patient = await patientRepository.findOne({ where: { email } })
 
     if (!patient) {
-      logger.info('Patient not found', { email })
-      throw new BadRequestError('Patient not found')
+      logger.info('Patient not found, skipping resend', { email })
+      return
     }
 
     if (patient.isEmailVerified) {
-      logger.info('Email already verified', { email })
-      throw new BadRequestError('Email is already verified')
+      logger.info('Email already verified, skipping resend', { email })
+      return
     }
 
-    // Generate new verification token
-    const emailVerificationToken = crypto.randomBytes(32).toString('hex')
-    const emailVerificationExpires = new Date(Date.now() + 1 * 60 * 60 * 1000) // 1 hour
+    const { token, expires } = generateVerificationToken()
 
-    patient.emailVerificationToken = emailVerificationToken
-    patient.emailVerificationExpires = emailVerificationExpires
+    patient.emailVerificationToken = token
+    patient.emailVerificationExpires = expires
 
     await patientRepository.save(patient)
-    await emailService.sendVerificationEmail(
-      patient.email,
-      emailVerificationToken,
-      patient.firstName
-    )
-    logger.info('Verification email resent', { email })
-    return {
-      success: true,
-      message: 'Verification email sent successfully. Please check your inbox.',
-    }
+    await emailService.sendVerificationEmail(patient.email, token, patient.firstName)
   },
 }

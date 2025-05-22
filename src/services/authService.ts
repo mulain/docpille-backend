@@ -1,9 +1,9 @@
 import { AppDataSource } from '../data-source'
-import { Patient } from '../entities/Patient'
 import { compare, hash } from 'bcrypt'
 import { sign, SignOptions, verify } from 'jsonwebtoken'
 
 // local imports
+import { Patient } from '../entities/Patient'
 import config from '../config/config'
 import { JwtPayload, UserRole } from '../types/auth'
 import { BadRequestError } from '../utils/errors'
@@ -17,16 +17,14 @@ export const authService = {
     const patient = await patientRepository.findOne({ where: { email } })
 
     if (!patient) {
+      logger.info('Invalid email on login attempt', { email })
       throw new BadRequestError('Invalid email or password')
     }
 
     const isPasswordValid = await compare(password, patient.passwordHash)
     if (!isPasswordValid) {
+      logger.info('Invalid password on login attempt', { email })
       throw new BadRequestError('Invalid email or password')
-    }
-
-    if (!patient.isEmailVerified) {
-      throw new BadRequestError('Please verify your email before logging in')
     }
 
     const payload: JwtPayload = {
@@ -40,6 +38,7 @@ export const authService = {
     }
 
     const token = sign(payload, config.jwt.secret, options)
+    logger.info('Login successful', { email })
 
     return {
       token,

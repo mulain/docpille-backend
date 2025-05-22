@@ -1,1 +1,3 @@
 - password security (currently just min 6)
+- review types folder, currently unorganized
+    - esp validation schemas all over the place and not streamlined

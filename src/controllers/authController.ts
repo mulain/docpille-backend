@@ -1,26 +1,8 @@
 import { Request } from 'express'
-import { z } from 'zod'
+
+// local imports
 import { authService } from '../services/authService'
-
-const loginSchema = z.object({
-  email: z
-    .string()
-    .email('Invalid email address')
-    .transform(val => val.trim().toLowerCase()),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-})
-
-const forgotPasswordSchema = z.object({
-  email: z
-    .string()
-    .email('Invalid email address')
-    .transform(val => val.trim().toLowerCase()),
-})
-
-const resetPasswordSchema = z.object({
-  token: z.string(),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-})
+import { loginSchema, forgotPasswordSchema, resetPasswordSchema } from '../utils/validations'
 
 export const authController = {
   async login(req: Request) {

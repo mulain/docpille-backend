@@ -1,64 +1,70 @@
 import nodemailer from 'nodemailer'
+import { renderFile } from 'ejs'
 import path from 'path'
-import fs from 'fs/promises'
 import config from '../config/config'
 import { logger } from '../utils/logger'
 
-const createTransporter = async () => {
-  return nodemailer.createTransport({
-    host: config.email.host,
-    port: config.email.port,
-    auth: {
-      user: config.email.user,
-      pass: config.email.pass,
-    },
-  })
+interface EmailData {
+  to: string
+  subject: string
+  template: string
+  data: Record<string, any>
 }
 
-const loadTemplate = async (templateName: string): Promise<string> => {
-  const templatePath = path.join(__dirname, '..', 'templates', 'emails', `${templateName}.html`)
-  return fs.readFile(templatePath, 'utf-8')
-}
+const transporter = nodemailer.createTransport({
+  host: config.email.host,
+  port: config.email.port,
+  secure: config.email.port === 465, // true for 465, false for other ports
+  auth: {
+    user: config.email.user,
+    pass: config.email.pass,
+  },
+})
 
-const compileTemplate = async (
-  template: string,
-  variables: Record<string, string>
-): Promise<string> => {
-  let compiledTemplate = template
-  for (const [key, value] of Object.entries(variables)) {
-    compiledTemplate = compiledTemplate.replace(new RegExp(`{{${key}}}`, 'g'), value)
+export async function sendEmail({ to, subject, template, data }: EmailData): Promise<void> {
+  try {
+    const templatePath = path.join(__dirname, '..', 'templates', `${template}.ejs`)
+    const html = await renderFile(templatePath, data)
+
+    await transporter.sendMail({
+      from: 'hello@demomailtrap.co', //TODO: config.email.fromEmail,
+      to,
+      subject,
+      html,
+    })
+
+    logger.info('Email sent successfully', { to, template })
+  } catch (error) {
+    logger.error('Failed to send email', { to, template, error })
+    // TODO: Inform admin, add retry logic
   }
-  return compiledTemplate
 }
 
+// Convenience functions for specific email types
 export const emailService = {
-  async sendVerificationEmail(
-    email: string,
-    token: string,
-    firstName: string
-  ): Promise<void> {
-    try {
-      const template = await loadTemplate('verification')
-      const verificationUrl = `${config.frontendUrl}/verify-email?token=${token}`
-
-      const compiledHtml = await compileTemplate(template, {
+  async sendVerificationEmail(email: string, token: string, firstName: string): Promise<void> {
+    const verificationUrl = `${config.frontendUrl}/verify-email?token=${token}`
+    await sendEmail({
+      to: email,
+      subject: 'Verify Your Email - DocPille',
+      template: 'verification',
+      data: {
         firstName,
         verificationUrl,
-      })
+      },
+    })
+  },
 
-      const mailOptions = {
-        from: 'hello@demomailtrap.co', // or config.email.fromEmail
-        to: email,
-        subject: 'Verify Your Email - DocPille',
-        html: compiledHtml,
-      }
-
-      const transport = await createTransporter()
-      await transport.sendMail(mailOptions)
-
-      logger.info('Verification email sent successfully', { email })
-    } catch (error) {
-      logger.error('Failed to send verification email', { email, error })
-    }
+  async sendPasswordResetEmail(email: string, token: string, firstName: string): Promise<void> {
+    const resetUrl = `${config.frontendUrl}/reset-password?token=${token}`
+    await sendEmail({
+      to: email,
+      subject: 'Reset Your Password - DocPille',
+      template: 'password-reset',
+      data: {
+        firstName,
+        resetUrl,
+      },
+    })
   },
 }

@@ -32,4 +32,18 @@ router.post(
   })
 )
 
+router.post(
+  '/forgot-password',
+  asyncHandler(async (req, res) => {
+    await authController.forgotPassword(req)
+  })
+)
+
+router.post(
+  '/reset-password',
+  asyncHandler(async (req, res) => {
+    await authController.resetPassword(req)
+  })
+)
+
 export default router

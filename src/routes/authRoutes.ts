@@ -9,7 +9,7 @@ const router = Router()
 router.post(
   '/login',
   asyncHandler(async (req, res) => {
-    await authController.login(req)
+    await authController.login(req, res)
   })
 )
 
@@ -25,14 +25,14 @@ router.post(
 router.post(
   '/forgot-password',
   asyncHandler(async (req, res) => {
-    await authController.forgotPassword(req)
+    await authController.forgotPassword(req, res)
   })
 )
 
 router.post(
   '/reset-password',
   asyncHandler(async (req, res) => {
-    await authController.resetPassword(req)
+    await authController.resetPassword(req, res)
   })
 )
 

@@ -14,7 +14,7 @@ const patientRepository = AppDataSource.getRepository(PatientEntity)
 
 const generateVerificationToken = () => {
   const token = crypto.randomBytes(32).toString('hex')
-  const expires = new Date(Date.now() + 1 * 60 * 60 * 1000) // 1 hour
+  const expires = new Date(Date.now() + 1 * 60 * 60 * 1000 * 24) // 24 hours
   return { token, expires }
 }
 

@@ -1,6 +1,8 @@
 import nodemailer from 'nodemailer'
 import { renderFile } from 'ejs'
 import path from 'path'
+
+// local imports
 import config from '../config/config'
 import { logger } from '../utils/logger'
 
@@ -21,7 +23,7 @@ const transporter = nodemailer.createTransport({
   },
 })
 
-export async function sendEmail({ to, subject, template, data }: EmailData): Promise<void> {
+async function sendEmail({ to, subject, template, data }: EmailData): Promise<void> {
   try {
     const templatePath = path.join(__dirname, '..', 'templates', `${template}.ejs`)
     const html = await renderFile(templatePath, data)
@@ -40,7 +42,6 @@ export async function sendEmail({ to, subject, template, data }: EmailData): Pro
   }
 }
 
-// Convenience functions for specific email types
 export const emailService = {
   async sendVerificationEmail(email: string, token: string, firstName: string): Promise<void> {
     const verificationUrl = `${config.frontendUrl}/verify-email?token=${token}`

@@ -8,6 +8,21 @@ import { UserRole } from '../types/user'
 const patientRepository = AppDataSource.getRepository(Patient)
 // const doctorRepository = AppDataSource.getRepository(Doctor)
 
+// Helper function to transform user data for frontend
+const transformUserForFrontend = (user: Patient) => {
+  const {
+    passwordHash,
+    emailVerificationToken,
+    emailVerificationExpires,
+    verifiedAt,
+    createdAt,
+    updatedAt,
+    ...userData
+  } = user
+
+  return userData
+}
+
 export const authService = {
   async login(email: string, password: string) {
     // Try to find user in both repositories
@@ -29,11 +44,8 @@ export const authService = {
     const role = patient ? UserRole.PATIENT : UserRole.DOCTOR
     const token = generateToken(user.id, user.email, role)
 
-    // Remove sensitive data from response
-    const { passwordHash, ...userData } = user
-
     logger.info('Login successful', { email })
-    return { user: userData, token }
+    return { user: transformUserForFrontend(user), token }
   },
 
   async getCurrentUser(userId: string | undefined) {
@@ -46,9 +58,7 @@ export const authService = {
       throw new NotFoundError('User not found')
     }
 
-    // Remove sensitive data from response
-    const { passwordHash, ...userData } = user
-    return userData
+    return transformUserForFrontend(user)
   },
 
   async forgotPassword(email: string) {

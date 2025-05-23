@@ -1,4 +1,5 @@
 import { Request, Response } from 'express'
+import { logger } from '../utils/logger'
 
 // local imports
 import { authService } from '../services/authService'
@@ -22,7 +23,7 @@ export const authController = {
 
   async getCurrentUser(req: Request, res: Response) {
     const user = await authService.getCurrentUser(req.user?.id)
-    res.json(user)
+    res.json({ user })
   },
 
   async forgotPassword(req: Request, res: Response) {
@@ -40,6 +41,7 @@ export const authController = {
   },
 
   async logout(req: Request, res: Response) {
+    logger.info('User logged out successfully')
     res.clearCookie('token')
     res.json({ message: 'Logged out successfully' })
   },

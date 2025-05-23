@@ -1,6 +1,7 @@
 import 'reflect-metadata'
 import express from 'express'
 import cors from 'cors'
+import cookieParser from 'cookie-parser'
 
 // local imports
 import patientRoutes from './routes/patientRoutes'
@@ -14,14 +15,20 @@ import { requestLogger } from './middleware/requestLogger'
 const app = express()
 
 // Middleware
-app.use(cors())
+app.use(
+  cors({
+    origin: config.frontendUrl,
+    credentials: true,
+  })
+)
 app.use(express.json())
+app.use(cookieParser())
 app.use(requestLogger)
 
 // API Routes
 app.use('/api/v1/auth', authRoutes)
-app.use('/api/v1/register', registerRoutes)
 app.use('/api/v1/patients', patientRoutes)
+app.use('/api/v1/register', registerRoutes)
 
 // Health check endpoint
 app.get('/health', (req, res) => {

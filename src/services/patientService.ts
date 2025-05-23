@@ -1,8 +1,9 @@
 import { AppDataSource } from '../data-source'
 import { Patient as PatientEntity } from '../entities/Patient'
 import { BadRequestError, UnauthorizedError, NotFoundError } from '../utils/errors'
-import { UserRole } from '../types/auth'
-import { patientSchema, Patient, UpdatePatientDTO } from '../types/patient'
+import { UserRole } from '../types/user'
+import { Patient, UpdatePatientDTO } from '../types/patient'
+import { logger } from '../utils/logger'
 
 interface RequestUser {
   role: UserRole
@@ -11,12 +12,13 @@ interface RequestUser {
 
 const patientRepository = AppDataSource.getRepository(PatientEntity)
 
-export class PatientService {
+export const patientService = {
   // Get all patients - Only accessible by medical staff
   async getAllPatients(user: { role: UserRole }): Promise<Patient[]> {
-    if (user.role !== UserRole.DOCTOR) {
+    if (user.role !== UserRole.DOCTOR && user.role !== UserRole.ADMIN) {
       throw new UnauthorizedError('Only medical staff can view all patients')
     }
+
     const patients = await patientRepository.find()
     return patients.map(patient => ({
       id: patient.id,
@@ -31,17 +33,17 @@ export class PatientService {
       createdAt: patient.createdAt,
       updatedAt: patient.updatedAt,
     }))
-  }
+  },
 
   // Get patient by ID - Only accessible by the patient themselves or medical staff
-  async getPatientById(id: string, user: { role: UserRole; entityId?: string }): Promise<Patient> {
+  async getPatientById(id: string, user: { role: UserRole; id?: string }): Promise<Patient> {
     const patient = await patientRepository.findOne({ where: { id } })
     if (!patient) {
-      throw new BadRequestError('Patient not found')
+      throw new NotFoundError('Patient not found')
     }
 
-    if (user.role !== UserRole.DOCTOR && user.entityId !== id) {
-      throw new UnauthorizedError('You can only view your own patient profile')
+    if (user.role !== UserRole.DOCTOR && user.role !== UserRole.ADMIN && user.id !== patient.id) {
+      throw new UnauthorizedError('You can only view your own patient information')
     }
 
     return {
@@ -57,34 +59,27 @@ export class PatientService {
       createdAt: patient.createdAt,
       updatedAt: patient.updatedAt,
     }
-  }
+  },
 
   // Update patient - Patients can update their own basic info, medical staff can update everything
   async updatePatient(
     id: string,
     data: UpdatePatientDTO,
-    user: { role: UserRole; entityId?: string }
+    user: { role: UserRole; id?: string }
   ): Promise<Patient> {
     const patient = await patientRepository.findOne({ where: { id } })
     if (!patient) {
-      throw new BadRequestError('Patient not found')
+      throw new NotFoundError('Patient not found')
     }
 
-    if (user.role !== UserRole.DOCTOR && user.entityId !== id) {
-      throw new UnauthorizedError('You can only update your own patient profile')
+    if (user.role !== UserRole.DOCTOR && user.role !== UserRole.ADMIN && user.id !== patient.id) {
+      throw new UnauthorizedError('You can only update your own patient information')
     }
 
-    // If patient is updating their own profile, only allow basic info updates
-    if (user.role !== UserRole.DOCTOR) {
-      const { firstName, lastName } = patientSchema.parse(data)
-      Object.assign(patient, { firstName, lastName })
-    } else {
-      // Medical staff can update all fields
-      const validatedData = patientSchema.parse(data)
-      Object.assign(patient, validatedData)
-    }
-
+    // Update patient data
+    Object.assign(patient, data)
     const updatedPatient = await patientRepository.save(patient)
+
     return {
       id: updatedPatient.id,
       firstName: updatedPatient.firstName,
@@ -98,11 +93,11 @@ export class PatientService {
       createdAt: updatedPatient.createdAt,
       updatedAt: updatedPatient.updatedAt,
     }
-  }
+  },
 
   // Delete patient - Only accessible by medical staff
   async deletePatient(id: string, user: { role: UserRole }): Promise<void> {
-    if (user.role !== UserRole.DOCTOR) {
+    if (user.role !== UserRole.DOCTOR && user.role !== UserRole.ADMIN) {
       throw new UnauthorizedError('Only medical staff can delete patients')
     }
 
@@ -112,19 +107,25 @@ export class PatientService {
     }
 
     await patientRepository.remove(patient)
-  }
+  },
 
   // Get patient's appointments - Only accessible by the patient themselves or medical staff
-  async getPatientAppointments(id: string, user: RequestUser): Promise<any[]> {
-    // Verify access rights
-    this.verifyAccess(id, user)
+  async getPatientAppointments(id: string, user: { role: UserRole; id?: string }): Promise<any[]> {
+    const patient = await patientRepository.findOne({ where: { id } })
+    if (!patient) {
+      throw new NotFoundError('Patient not found')
+    }
+
+    if (user.role !== UserRole.DOCTOR && user.role !== UserRole.ADMIN && user.id !== patient.id) {
+      throw new UnauthorizedError('You can only view your own appointments')
+    }
 
     // TODO: Implement database integration to fetch patient's appointments
     return []
-  }
+  },
 
   // Helper method to verify access rights
-  private verifyAccess(patientId: string, user: RequestUser): void {
+  verifyAccess(patientId: string, user: RequestUser): void {
     // Admins and doctors can access any patient
     if (user.role === UserRole.ADMIN || user.role === UserRole.DOCTOR) {
       return
@@ -134,5 +135,5 @@ export class PatientService {
     if (user.role === UserRole.PATIENT && user.entityId !== patientId) {
       throw new UnauthorizedError('You can only access your own data')
     }
-  }
+  },
 }

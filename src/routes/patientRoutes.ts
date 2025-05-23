@@ -1,7 +1,7 @@
 import { Router } from 'express'
 
 // local imports
-import { patientController } from '../controllers/patientController'
+import  patientController  from '../controllers/patientController'
 import { asyncHandler } from '../utils/asyncHandler'
 
 const router = Router()

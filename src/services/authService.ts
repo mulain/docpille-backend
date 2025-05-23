@@ -1,101 +1,73 @@
 import { AppDataSource } from '../data-source'
-import { compare, hash } from 'bcrypt'
-import { sign, SignOptions, verify } from 'jsonwebtoken'
-
-// local imports
 import { Patient } from '../entities/Patient'
-import config from '../config/config'
-import { JwtPayload, UserRole } from '../types/auth'
-import { BadRequestError } from '../utils/errors'
-import { emailService } from './emailService'
+import { UnauthorizedError, NotFoundError } from '../utils/errors'
+import { comparePasswords, generateToken } from '../utils/auth'
 import { logger } from '../utils/logger'
+import { UserRole } from '../types/user'
 
 const patientRepository = AppDataSource.getRepository(Patient)
+// const doctorRepository = AppDataSource.getRepository(Doctor)
 
 export const authService = {
   async login(email: string, password: string) {
+    // Try to find user in both repositories
     const patient = await patientRepository.findOne({ where: { email } })
+    // const doctor = null /await doctorRepository.findOne({ where: { email } })
 
-    if (!patient) {
-      logger.info('Invalid email on login attempt', { email })
-      throw new BadRequestError('Invalid email or password')
+    const user = patient // || doctor
+    if (!user) {
+      logger.info('Login attempt with non-existent email', { email })
+      throw new UnauthorizedError('Invalid email or password')
     }
 
-    const isPasswordValid = await compare(password, patient.passwordHash)
+    const isPasswordValid = await comparePasswords(password, user.passwordHash)
     if (!isPasswordValid) {
-      logger.info('Invalid password on login attempt', { email })
-      throw new BadRequestError('Invalid email or password')
+      logger.info('Login attempt with invalid password', { email })
+      throw new UnauthorizedError('Invalid email or password')
     }
 
-    const payload: JwtPayload = {
-      id: patient.id,
-      email: patient.email,
-      role: UserRole.PATIENT,
-    }
+    const role = patient ? UserRole.PATIENT : UserRole.DOCTOR
+    const token = generateToken(user.id, user.email, role)
 
-    const options: SignOptions = {
-      expiresIn: 24 * 60 * 60, // 24 hours in seconds
-    }
+    // Remove sensitive data from response
+    const { passwordHash, ...userData } = user
 
-    const token = sign(payload, config.jwt.secret, options)
     logger.info('Login successful', { email })
+    return { user: userData, token }
+  },
 
-    return {
-      token,
-      user: {
-        id: patient.id,
-        email: patient.email,
-        firstName: patient.firstName,
-        lastName: patient.lastName,
-      },
+  async getCurrentUser(userId: string | undefined) {
+    // Try to find user in both repositories
+    const patient = await patientRepository.findOne({ where: { id: userId } })
+    //const doctor = await doctorRepository.findOne({ where: { id: userId } })
+
+    const user = patient //|| doctor
+    if (!user) {
+      throw new NotFoundError('User not found')
     }
+
+    // Remove sensitive data from response
+    const { passwordHash, ...userData } = user
+    return userData
   },
 
   async forgotPassword(email: string) {
+    // Try to find user in both repositories
     const patient = await patientRepository.findOne({ where: { email } })
+    //const doctor = await doctorRepository.findOne({ where: { email } })
 
-    if (!patient) {
+    if (!patient /* && !doctor */) {
       logger.info('Email not found', { email })
-      // Don't reveal that the email doesn't exist
+      // Not throwing an error to not reveal if email exists
       return
     }
 
-    const payload = {
-      id: patient.id,
-      email: patient.email,
-      type: 'password-reset',
-    }
-
-    const options: SignOptions = {
-      expiresIn: '1h', // Token expires in 1 hour
-    }
-
-    const token = sign(payload, config.jwt.secret, options)
-    await emailService.sendPasswordResetEmail(patient.email, token, patient.firstName)
+    // TODO: Implement password reset token generation and email sending
+    logger.info('Password reset requested', { email })
   },
 
   async resetPassword(token: string, newPassword: string) {
-    try {
-      const decoded = verify(token, config.jwt.secret) as JwtPayload & { type: string }
-
-      if (decoded.type !== 'password-reset') {
-        throw new BadRequestError('Invalid token')
-      }
-
-      const patient = await patientRepository.findOne({ where: { id: decoded.id } })
-
-      if (!patient) {
-        throw new BadRequestError('User not found')
-      }
-
-      const passwordHash = await hash(newPassword, 10)
-      patient.passwordHash = passwordHash
-      await patientRepository.save(patient)
-    } catch (error) {
-      if (error instanceof BadRequestError) {
-        throw error
-      }
-      throw new BadRequestError('Invalid or expired token')
-    }
+    // TODO: Implement password reset with token validation
+    logger.info('Password reset attempted', { token })
   },
 }

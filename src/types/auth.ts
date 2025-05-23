@@ -1,8 +1,4 @@
-export enum UserRole {
-  PATIENT = 'patient',
-  DOCTOR = 'doctor',
-  ADMIN = 'admin',
-}
+import { UserRole } from './user'
 
 export interface JwtPayload {
   id: string
@@ -15,7 +11,6 @@ export interface AuthUser {
   email: string
   password: string // This will be hashed
   role: UserRole
-  entityId?: string
   createdAt: Date
   updatedAt: Date
 }

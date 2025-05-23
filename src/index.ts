@@ -1,5 +1,6 @@
 import { initialize } from './app'
 import config from './config/config'
+import './types/express'
 
 async function startServer() {
   try {

@@ -3,6 +3,7 @@ import { Router } from 'express'
 // local imports
 import { authController } from '../controllers/authController'
 import { asyncHandler } from '../utils/asyncHandler'
+import { authenticate } from '../middleware/auth'
 
 const router = Router()
 
@@ -33,6 +34,21 @@ router.post(
   '/reset-password',
   asyncHandler(async (req, res) => {
     await authController.resetPassword(req, res)
+  })
+)
+
+router.get(
+  '/me',
+  authenticate,
+  asyncHandler(async (req, res) => {
+    await authController.getCurrentUser(req, res)
+  })
+)
+
+router.post(
+  '/logout',
+  asyncHandler(async (req, res) => {
+    await authController.logout(req, res)
   })
 )
 

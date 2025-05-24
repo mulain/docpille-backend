@@ -1,6 +1,6 @@
 import { AppDataSource } from '../data-source'
 import { Patient } from '../entities/Patient'
-import { UnauthorizedError, NotFoundError } from '../utils/errors'
+import { UnauthorizedError, NotFoundError, UnverifiedEmailError } from '../utils/errors'
 import { comparePasswords, generateToken } from '../utils/auth'
 import { logger } from '../utils/logger'
 import { UserRole } from '../types/user'
@@ -39,6 +39,11 @@ export const authService = {
     if (!isPasswordValid) {
       logger.info('Login attempt with invalid password', { email })
       throw new UnauthorizedError('Invalid email or password')
+    }
+
+    if (!user.isEmailVerified) {
+      logger.info('Login attempt with unverified email', { email })
+      throw new UnverifiedEmailError('Please verify your email before logging in')
     }
 
     const role = patient ? UserRole.PATIENT : UserRole.DOCTOR

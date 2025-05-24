@@ -30,6 +30,13 @@ export class UnauthorizedError extends AppError {
   }
 }
 
+export class UnverifiedEmailError extends AppError {
+  constructor(message = 'Please verify your email before logging in') {
+    super(401, message)
+    Object.setPrototypeOf(this, UnverifiedEmailError.prototype)
+  }
+}
+
 export class ForbiddenError extends AppError {
   constructor(message = 'Forbidden') {
     super(403, message)

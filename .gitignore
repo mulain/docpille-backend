@@ -1,7 +1,5 @@
 # Dependencies
 node_modules/
-package-lock.json
-yarn.lock
 
 # Build output
 dist/
@@ -41,6 +39,3 @@ temp/
 # Database
 *.sqlite
 *.sqlite3
-
-# Email previews (from ethereal)
-preview/

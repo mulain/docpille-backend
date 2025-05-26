@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction, ErrorRequestHandler } from 'express'
+import { z } from 'zod'
 
 // local imports
 import { logger } from '../utils/logger'
@@ -10,15 +11,32 @@ export const errorHandler: ErrorRequestHandler = (
   res: Response,
   next: NextFunction
 ): void => {
-  logger.error('Error occurred', {
-    error: err.message,
-    stack: err.stack,
-    path: req.path,
-    method: req.method,
-    body: req.body,
-    query: req.query,
-  })
+  if (err instanceof AppError) {
+    logger.error('AppError occurred', {
+      error: err.message,
+      statusCode: err.statusCode,
+    })
+  } else {
+    logger.error('Error occurred', {
+      error: err.message,
+      stack: err.stack,
+      path: req.path,
+      method: req.method,
+      body: req.body,
+      query: req.query,
+    })
+  }
 
+  // Handle Zod validation errors
+  if (err instanceof z.ZodError) {
+    res.status(400).json({
+      success: false,
+      message: err.errors[0].message,
+    })
+    return
+  }
+
+  // Handle our custom AppErrors
   if (err instanceof AppError) {
     res.status(err.statusCode).json({
       success: false,

@@ -1,102 +1,117 @@
-import crypto from 'crypto'
-import { MoreThan } from 'typeorm'
+import { eq } from 'drizzle-orm'
 
 // local imports
-import { AppDataSource } from '../data-source'
-import { Patient as PatientEntity } from '../entities/Patient'
-import { BadRequestError } from '../utils/errors'
-import { hashPassword } from '../utils/auth'
-import { emailService } from './emailService'
-import { Patient, CreatePatientDTO } from '../types/patient'
+import { db } from '../db'
+import { users, patients, userRoleEnum } from '../db/schema'
+import { hashPassword, generateEmailVerificationToken } from '../utils/auth'
 import { logger } from '../utils/logger'
-
-const patientRepository = AppDataSource.getRepository(PatientEntity)
-
-const generateVerificationToken = () => {
-  const token = crypto.randomBytes(32).toString('hex')
-  const expires = new Date(Date.now() + 1 * 60 * 60 * 1000 * 24) // 24 hours
-  return { token, expires }
-}
+import { emailService } from '../services/emailService'
+import { CreatePatientDTO } from '../types/patient'
+import {
+  EmailExistsError,
+  InvalidVerificationTokenError,
+  ExpiredVerificationTokenError,
+  UserNotFoundError,
+  EmailAlreadyVerifiedError,
+} from '../utils/errors'
 
 export const registerService = {
-  async registerPatient(data: CreatePatientDTO): Promise<Patient> {
-    const existingPatient = await patientRepository.findOne({ where: { email: data.email } })
-    if (existingPatient) {
-      logger.info('Email already registered', { email: data.email })
-      throw new BadRequestError('Email already registered')
-    }
-
-    const passwordHash = await hashPassword(data.password)
-    const { token, expires } = generateVerificationToken()
-
-    const patient = patientRepository.create({
-      ...data,
-      passwordHash,
-      isEmailVerified: false,
-      emailVerificationToken: token,
-      emailVerificationExpires: expires,
+  async registerPatient(data: CreatePatientDTO) {
+    const existingUser = await db.query.users.findFirst({
+      where: eq(users.email, data.email),
     })
 
-    await patientRepository.save(patient)
-    logger.info('New patient registered', { email: data.email })
+    if (existingUser) {
+      logger.error('Email already registered', { email: data.email })
+      throw new EmailExistsError()
+    }
 
-    await emailService.sendVerificationEmail(patient.email, token, patient.firstName)
+    const verificationToken = generateEmailVerificationToken()
+    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
 
-    // Remove sensitive data from response
-    const {
-      passwordHash: _,
-      emailVerificationToken: __,
-      emailVerificationExpires: ___,
-      ...patientResponse
-    } = patient
+    const [user] = await db
+      .insert(users)
+      .values({
+        email: data.email,
+        passwordHash: await hashPassword(data.password),
+        firstName: data.firstName,
+        lastName: data.lastName,
+        phoneNumber: data.phoneNumber,
+        address: data.address,
+        role: 'PATIENT' as (typeof userRoleEnum.enumValues)[number],
+        emailVerificationToken: verificationToken,
+        emailVerificationExpires: verificationExpires,
+      })
+      .returning()
 
-    return patientResponse
+    const [patient] = await db
+      .insert(patients)
+      .values({
+        userId: user.id,
+        dateOfBirth: data.dateOfBirth,
+      })
+      .returning()
+
+    await emailService.sendVerificationEmail(user.email, verificationToken, user.firstName)
+
+    logger.info('Patient registered', { email: user.email })
+    return { user, patient }
   },
 
-  async verifyEmail(token: string): Promise<{ success: boolean; message: string }> {
-    const patient = await patientRepository.findOne({
-      where: {
-        emailVerificationToken: token,
-        emailVerificationExpires: MoreThan(new Date()),
-        isEmailVerified: false,
-      },
+  async verifyEmail(token: string) {
+    const user = await db.query.users.findFirst({
+      where: eq(users.emailVerificationToken, token),
     })
 
-    if (!patient) {
-      logger.info('Invalid or expired verification token', { token })
-      throw new BadRequestError('Invalid or expired verification token')
+    if (!user) {
+      throw new InvalidVerificationTokenError()
     }
 
-    // Update verification status
-    patient.isEmailVerified = true
-    patient.verifiedAt = new Date()
-    patient.emailVerificationToken = null
-    patient.emailVerificationExpires = null
+    if (user.emailVerificationExpires && user.emailVerificationExpires < new Date()) {
+      throw new ExpiredVerificationTokenError()
+    }
 
-    await patientRepository.save(patient)
-    logger.info('Email verified', { email: patient.email }, { patientId: patient.id })
-    return { success: true, message: 'Email verified successfully' }
+    await db
+      .update(users)
+      .set({
+        isEmailVerified: true,
+        verifiedAt: new Date(),
+        emailVerificationToken: null,
+        emailVerificationExpires: null,
+      })
+      .where(eq(users.id, user.id))
+
+    logger.info('Email verified', { email: user.email })
+    return { message: 'Email verified successfully' }
   },
 
-  async resendVerificationToken(email: string): Promise<void> {
-    const patient = await patientRepository.findOne({ where: { email } })
+  async resendVerificationToken(email: string) {
+    const user = await db.query.users.findFirst({
+      where: eq(users.email, email),
+    })
 
-    if (!patient) {
-      logger.info('Patient not found, skipping resend', { email })
-      return
+    if (!user) {
+      throw new UserNotFoundError()
     }
 
-    if (patient.isEmailVerified) {
-      logger.info('Email already verified, skipping resend', { email })
-      return
+    if (user.isEmailVerified) {
+      throw new EmailAlreadyVerifiedError()
     }
 
-    const { token, expires } = generateVerificationToken()
+    const verificationToken = generateEmailVerificationToken()
+    const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
 
-    patient.emailVerificationToken = token
-    patient.emailVerificationExpires = expires
+    await db
+      .update(users)
+      .set({
+        emailVerificationToken: verificationToken,
+        emailVerificationExpires: verificationExpires,
+      })
+      .where(eq(users.id, user.id))
 
-    await patientRepository.save(patient)
-    await emailService.sendVerificationEmail(patient.email, token, patient.firstName)
+    await emailService.sendVerificationEmail(user.email, verificationToken, user.firstName)
+
+    logger.info('Verification token resent', { email: user.email })
+    return { message: 'Verification email sent' }
   },
 }

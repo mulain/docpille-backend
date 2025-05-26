@@ -1,20 +1,5 @@
-import { Patient as PatientEntity } from '../entities/Patient'
 import { z } from 'zod'
-
-// API response type (omitting sensitive fields)
-export type Patient = {
-  id: string
-  firstName: string
-  lastName: string
-  dateOfBirth?: string | null
-  email: string
-  phoneNumber?: string | null
-  address?: string | null
-  isEmailVerified: boolean
-  verifiedAt?: Date | null
-  createdAt: Date
-  updatedAt: Date
-}
+import { UserResponse } from './user'
 
 // Validation schema for patient creation/update
 export const patientSchema = z.object({
@@ -29,3 +14,24 @@ export const patientSchema = z.object({
 
 export type CreatePatientDTO = z.infer<typeof patientSchema>
 export type UpdatePatientDTO = Partial<CreatePatientDTO>
+
+// API response type
+export type PatientResponse = UserResponse & {
+  patient: {
+    dateOfBirth: string | null
+  } | null
+}
+
+export interface Patient {
+  id: string
+  firstName: string
+  lastName: string
+  dateOfBirth?: string
+  email: string
+  phoneNumber?: string
+  address?: string
+  isEmailVerified: boolean
+  verifiedAt?: Date
+  createdAt: Date
+  updatedAt: Date
+}

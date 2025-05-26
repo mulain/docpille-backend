@@ -2,7 +2,7 @@ import { Router } from 'express'
 
 // local imports
 import { registerController } from '../controllers/registerController'
-import { asyncHandler } from '../utils/asyncHandler'
+import { asyncHandler } from '../middleware/asyncHandler'
 import { emailVerificationLimiter } from '../middleware/rateLimiter'
 
 const router = Router()

@@ -1,4 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
+
+// local imports
 import { UnauthorizedError } from '../utils/errors'
 import { verifyToken } from '../utils/auth'
 

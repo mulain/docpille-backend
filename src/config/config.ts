@@ -1,5 +1,7 @@
-import 'dotenv/config'
+import { config as dotenvConfig } from 'dotenv'
 import { z } from 'zod'
+
+dotenvConfig()
 
 const NodeEnv = z.enum(['dev', 'test', 'prod'])
 type NodeEnv = z.infer<typeof NodeEnv>

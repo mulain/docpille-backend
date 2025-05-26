@@ -37,10 +37,45 @@ export class UnverifiedEmailError extends AppError {
   }
 }
 
+export class EmailExistsError extends AppError {
+  constructor(message = 'An account with this email already exists') {
+    super(409, message)
+    Object.setPrototypeOf(this, EmailExistsError.prototype)
+  }
+}
+
+export class InvalidVerificationTokenError extends AppError {
+  constructor(message = 'Invalid verification token') {
+    super(400, message)
+    Object.setPrototypeOf(this, InvalidVerificationTokenError.prototype)
+  }
+}
+
+export class ExpiredVerificationTokenError extends AppError {
+  constructor(message = 'Verification token has expired') {
+    super(400, message)
+    Object.setPrototypeOf(this, ExpiredVerificationTokenError.prototype)
+  }
+}
+
 export class ForbiddenError extends AppError {
   constructor(message = 'Forbidden') {
     super(403, message)
     Object.setPrototypeOf(this, ForbiddenError.prototype)
+  }
+}
+
+export class UserNotFoundError extends AppError {
+  constructor(message = 'User not found') {
+    super(404, message)
+    Object.setPrototypeOf(this, UserNotFoundError.prototype)
+  }
+}
+
+export class EmailAlreadyVerifiedError extends AppError {
+  constructor(message = 'Email is already verified') {
+    super(400, message)
+    Object.setPrototypeOf(this, EmailAlreadyVerifiedError.prototype)
   }
 }
 

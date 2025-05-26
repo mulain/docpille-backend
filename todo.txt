@@ -4,3 +4,4 @@
 - refactor db to contain users, not patients or doctors
 - patient endpoints are a mess
 - logging patient password in requestlogger because it logs the body?
+- rate limiter should apply to more (all?) routes, also reinstate correct n

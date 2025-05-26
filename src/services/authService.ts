@@ -1,84 +1,114 @@
-import { AppDataSource } from '../data-source'
-import { Patient } from '../entities/Patient'
-import { UnauthorizedError, NotFoundError, UnverifiedEmailError } from '../utils/errors'
-import { comparePasswords, generateToken } from '../utils/auth'
+import { eq } from 'drizzle-orm'
+
+// local imports
+import { db } from '../db'
+import { users, userRoleEnum } from '../db/schema'
+import { generateToken, hashPassword } from '../utils/auth'
+import { comparePasswords } from '../utils/auth'
 import { logger } from '../utils/logger'
-import { UserRole } from '../types/user'
-
-const patientRepository = AppDataSource.getRepository(Patient)
-// const doctorRepository = AppDataSource.getRepository(Doctor)
-
-// Helper function to transform user data for frontend
-const transformUserForFrontend = (user: Patient) => {
-  const {
-    passwordHash,
-    emailVerificationToken,
-    emailVerificationExpires,
-    verifiedAt,
-    createdAt,
-    updatedAt,
-    ...userData
-  } = user
-
-  return userData
-}
+import { UnauthorizedError, NotFoundError, EmailExistsError } from '../utils/errors'
 
 export const authService = {
   async login(email: string, password: string) {
-    // Try to find user in both repositories
-    const patient = await patientRepository.findOne({ where: { email } })
-    // const doctor = null /await doctorRepository.findOne({ where: { email } })
+    const user = await db.query.users.findFirst({
+      where: eq(users.email, email),
+    })
 
-    const user = patient // || doctor
     if (!user) {
       logger.info('Login attempt with non-existent email', { email })
       throw new UnauthorizedError('Invalid email or password')
     }
 
-    const isPasswordValid = await comparePasswords(password, user.passwordHash)
-    if (!isPasswordValid) {
+    const isValidPassword = await comparePasswords(password, user.passwordHash)
+    if (!isValidPassword) {
       logger.info('Login attempt with invalid password', { email })
       throw new UnauthorizedError('Invalid email or password')
     }
 
-    if (!user.isEmailVerified) {
-      logger.info('Login attempt with unverified email', { email })
-      throw new UnverifiedEmailError('Please verify your email before logging in')
-    }
-
-    const role = patient ? UserRole.PATIENT : UserRole.DOCTOR
-    const token = generateToken(user.id, user.email, role)
+    const token = generateToken(user.id, user.email, user.role)
 
     logger.info('Login successful', { email })
-    return { user: transformUserForFrontend(user), token }
+    return {
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+      },
+    }
   },
 
   async getCurrentUser(userId: string | undefined) {
-    // Try to find user in both repositories
-    const patient = await patientRepository.findOne({ where: { id: userId } })
-    //const doctor = await doctorRepository.findOne({ where: { id: userId } })
+    if (!userId) {
+      throw new UnauthorizedError('Not authenticated')
+    }
 
-    const user = patient //|| doctor
+    const user = await db.query.users.findFirst({
+      where: eq(users.id, userId),
+    })
+
     if (!user) {
       throw new NotFoundError('User not found')
     }
 
-    return transformUserForFrontend(user)
+    return {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+    }
   },
 
   async forgotPassword(email: string) {
-    // Try to find user in both repositories
-    const patient = await patientRepository.findOne({ where: { email } })
-    //const doctor = await doctorRepository.findOne({ where: { email } })
+    const user = await db.query.users.findFirst({
+      where: eq(users.email, email),
+    })
 
-    if (!patient /* && !doctor */) {
+    if (!user) {
       logger.info('Email not found', { email })
       // Not throwing an error to not reveal if email exists
       return
     }
 
-    // TODO: Implement password reset token generation and email sending
-    logger.info('Password reset requested', { email })
+    // TODO: Implement password reset logic
+    logger.info('Password reset attempted', { email })
+  },
+
+  async register(email: string, password: string, firstName: string, lastName: string) {
+    const existingUser = await db.query.users.findFirst({
+      where: eq(users.email, email),
+    })
+
+    if (existingUser) {
+      throw new EmailExistsError('Email already registered')
+    }
+
+    const [user] = await db
+      .insert(users)
+      .values({
+        email,
+        passwordHash: await hashPassword(password),
+        firstName,
+        lastName,
+        role: 'PATIENT' as (typeof userRoleEnum.enumValues)[number],
+      })
+      .returning()
+
+    const token = generateToken(user.id, user.email, user.role)
+
+    return {
+      token,
+      user: {
+        id: user.id,
+        email: user.email,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        role: user.role,
+      },
+    }
   },
 
   async resetPassword(token: string, newPassword: string) {

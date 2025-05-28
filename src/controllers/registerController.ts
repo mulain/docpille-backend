@@ -3,7 +3,7 @@ import { z } from 'zod'
 
 // local imports
 import { registerService } from '../services/registerService'
-import { BadRequestError, EmailExistsError } from '../utils/errors'
+import { BadRequestError } from '../utils/errors'
 
 const registerSchema = z.object({
   firstName: z.string().min(2, 'First name must be at least 2 characters'),

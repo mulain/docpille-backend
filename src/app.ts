@@ -4,12 +4,15 @@ import cookieParser from 'cookie-parser'
 import { sql } from 'drizzle-orm'
 
 // local imports
-import authRoutes from './routes/authRoutes'
-import registerRoutes from './routes/registerRoutes'
+import { db } from './db'
 import config from './config/config'
 import { errorHandler } from './middleware/errorHandler'
 import { requestLogger } from './middleware/requestLogger'
-import { db } from './db'
+
+// routes
+import authRoutes from './routes/authRoutes'
+import registerRoutes from './routes/registerRoutes'
+import appointmentRoutes from './routes/appointmentRoutes'
 
 const app = express()
 
@@ -27,6 +30,7 @@ app.use(requestLogger)
 // Routes
 app.use('/api/v1/auth', authRoutes)
 app.use('/api/v1/register', registerRoutes)
+app.use('/api/v1/appointments', appointmentRoutes)
 
 // Health check endpoint
 app.get('/health', (req, res) => {

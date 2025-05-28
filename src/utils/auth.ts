@@ -6,6 +6,7 @@ import crypto from 'crypto'
 import config from '../config/config'
 import { userRoleEnum } from '../db/schema'
 import { JwtPayload } from '../types/jwtPayload'
+import { User } from '../types/user'
 
 const SALT_ROUNDS = 10
 
@@ -17,7 +18,7 @@ export async function comparePasswords(password: string, hash: string): Promise<
   return bcrypt.compare(password, hash)
 }
 
-export function generateEmailVerificationToken(): string {
+export function generateRandomToken(): string {
   return crypto.randomBytes(32).toString('hex')
 }
 
@@ -37,4 +38,14 @@ export function generateToken(
 
 export function verifyToken(token: string): JwtPayload {
   return jwt.verify(token, config.jwt.secret) as JwtPayload
+}
+
+export function prepareUserResponse(user: User) {
+  return {
+    id: user.id,
+    email: user.email,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    role: user.role,
+  }
 }

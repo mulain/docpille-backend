@@ -7,27 +7,14 @@ import { emailVerificationLimiter } from '../middleware/rateLimiter'
 
 const router = Router()
 
-router.post(
-  '/',
-  asyncHandler(async (req, res) => {
-    await registerController.register(req, res)
-  })
-)
+router.post('/', asyncHandler(registerController.register))
 
-router.get(
-  '/verify-email',
-  emailVerificationLimiter,
-  asyncHandler(async (req, res) => {
-    await registerController.verifyEmail(req, res)
-  })
-)
+router.get('/verify-email', emailVerificationLimiter, asyncHandler(registerController.verifyEmail))
 
 router.post(
   '/resend-verification',
   emailVerificationLimiter,
-  asyncHandler(async (req, res) => {
-    await registerController.resendVerification(req, res)
-  })
+  asyncHandler(registerController.resendVerification)
 )
 
 export default router

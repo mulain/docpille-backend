@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 // local imports
 import { db } from '../db'
 import { users, patients, userRoleEnum } from '../db/schema'
-import { hashPassword, generateEmailVerificationToken } from '../utils/auth'
+import { hashPassword, generateRandomToken } from '../utils/auth'
 import { logger } from '../utils/logger'
 import { emailService } from '../services/emailService'
 import { CreatePatientDTO } from '../types/patient'
@@ -26,7 +26,7 @@ export const registerService = {
       throw new EmailExistsError()
     }
 
-    const verificationToken = generateEmailVerificationToken()
+    const verificationToken = generateRandomToken()
     const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
 
     const [user] = await db
@@ -55,6 +55,7 @@ export const registerService = {
     await emailService.sendVerificationEmail(user.email, verificationToken, user.firstName)
 
     logger.info('Patient registered', { email: user.email })
+    // shouldnt be returning all data
     return { user, patient }
   },
 
@@ -98,7 +99,7 @@ export const registerService = {
       throw new EmailAlreadyVerifiedError()
     }
 
-    const verificationToken = generateEmailVerificationToken()
+    const verificationToken = generateRandomToken()
     const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
 
     await db

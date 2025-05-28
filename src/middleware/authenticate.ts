@@ -15,7 +15,7 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
     const decoded = verifyToken(token)
     req.user = decoded
     next()
-  } catch (error) {
+  } catch {
     throw new UnauthorizedError('Invalid token')
   }
 }

@@ -3,16 +3,11 @@ import { Router } from 'express'
 // local imports
 import { authController } from '../controllers/authController'
 import { asyncHandler } from '../middleware/asyncHandler'
-import { authenticate } from '../middleware/auth'
+import { authenticate } from '../middleware/authenticate'
 
 const router = Router()
 
-router.post(
-  '/login',
-  asyncHandler(async (req, res) => {
-    await authController.login(req, res)
-  })
-)
+router.post('/login', asyncHandler(authController.login))
 
 // TODO: Implement refresh token
 router.post(
@@ -23,33 +18,12 @@ router.post(
   })
 )
 
-router.post(
-  '/forgot-password',
-  asyncHandler(async (req, res) => {
-    await authController.forgotPassword(req, res)
-  })
-)
+router.post('/forgot-password', asyncHandler(authController.forgotPassword))
 
-router.post(
-  '/reset-password',
-  asyncHandler(async (req, res) => {
-    await authController.resetPassword(req, res)
-  })
-)
+router.post('/reset-password', asyncHandler(authController.resetPassword))
 
-router.get(
-  '/me',
-  authenticate,
-  asyncHandler(async (req, res) => {
-    await authController.getCurrentUser(req, res)
-  })
-)
+router.get('/me', authenticate, asyncHandler(authController.getCurrentUser))
 
-router.post(
-  '/logout',
-  asyncHandler(async (req, res) => {
-    await authController.logout(req, res)
-  })
-)
+router.post('/logout', asyncHandler(authController.logout))
 
 export default router

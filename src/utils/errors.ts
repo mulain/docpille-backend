@@ -79,6 +79,20 @@ export class EmailAlreadyVerifiedError extends AppError {
   }
 }
 
+export class InvalidPasswordResetTokenError extends AppError {
+  constructor(message = 'Invalid password reset token') {
+    super(400, message)
+    Object.setPrototypeOf(this, InvalidPasswordResetTokenError.prototype)
+  }
+}
+
+export class ExpiredPasswordResetTokenError extends AppError {
+  constructor(message = 'Password reset token has expired') {
+    super(400, message)
+    Object.setPrototypeOf(this, ExpiredPasswordResetTokenError.prototype)
+  }
+}
+
 export interface ErrorResponse {
   status: 'error' | 'fail'
   message: string

@@ -2,11 +2,21 @@ import { eq } from 'drizzle-orm'
 
 // local imports
 import { db } from '../db'
-import { users, userRoleEnum } from '../db/schema'
-import { generateToken, hashPassword } from '../utils/auth'
-import { comparePasswords } from '../utils/auth'
+import { users } from '../db/schema'
+import {
+  generateToken,
+  hashPassword,
+  comparePasswords,
+  generateRandomToken,
+  prepareUserResponse,
+} from '../utils/auth'
 import { logger } from '../utils/logger'
-import { UnauthorizedError, NotFoundError, EmailExistsError } from '../utils/errors'
+import {
+  UnauthorizedError,
+  InvalidPasswordResetTokenError,
+  ExpiredPasswordResetTokenError,
+} from '../utils/errors'
+import { emailService } from './emailService'
 
 export const authService = {
   async login(email: string, password: string) {
@@ -30,36 +40,20 @@ export const authService = {
     logger.info('Login successful', { email })
     return {
       token,
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-      },
+      user: prepareUserResponse(user),
     }
   },
 
-  async getCurrentUser(userId: string | undefined) {
-    if (!userId) {
-      throw new UnauthorizedError('Not authenticated')
-    }
-
+  async getCurrentUser(userId: string) {
     const user = await db.query.users.findFirst({
       where: eq(users.id, userId),
     })
 
     if (!user) {
-      throw new NotFoundError('User not found')
+      return null
     }
 
-    return {
-      id: user.id,
-      email: user.email,
-      firstName: user.firstName,
-      lastName: user.lastName,
-      role: user.role,
-    }
+    return prepareUserResponse(user)
   },
 
   async forgotPassword(email: string) {
@@ -73,46 +67,44 @@ export const authService = {
       return
     }
 
-    // TODO: Implement password reset logic
-    logger.info('Password reset attempted', { email })
-  },
+    const resetToken = generateRandomToken()
+    const resetExpires = new Date(Date.now() + 60 * 60 * 1000) // 1 hour
 
-  async register(email: string, password: string, firstName: string, lastName: string) {
-    const existingUser = await db.query.users.findFirst({
-      where: eq(users.email, email),
-    })
-
-    if (existingUser) {
-      throw new EmailExistsError('Email already registered')
-    }
-
-    const [user] = await db
-      .insert(users)
-      .values({
-        email,
-        passwordHash: await hashPassword(password),
-        firstName,
-        lastName,
-        role: 'PATIENT' as (typeof userRoleEnum.enumValues)[number],
+    await db
+      .update(users)
+      .set({
+        passwordResetToken: resetToken,
+        passwordResetExpires: resetExpires,
       })
-      .returning()
+      .where(eq(users.id, user.id))
 
-    const token = generateToken(user.id, user.email, user.role)
+    await emailService.sendPasswordResetEmail(user.email, resetToken, user.firstName)
 
-    return {
-      token,
-      user: {
-        id: user.id,
-        email: user.email,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        role: user.role,
-      },
-    }
+    logger.info('Password reset email sent', { email: user.email })
   },
 
   async resetPassword(token: string, newPassword: string) {
-    // TODO: Implement password reset with token validation
-    logger.info('Password reset attempted', { token })
+    const user = await db.query.users.findFirst({
+      where: eq(users.passwordResetToken, token),
+    })
+
+    if (!user) {
+      throw new InvalidPasswordResetTokenError()
+    }
+
+    if (user.passwordResetExpires && user.passwordResetExpires < new Date()) {
+      throw new ExpiredPasswordResetTokenError()
+    }
+
+    await db
+      .update(users)
+      .set({
+        passwordHash: await hashPassword(newPassword),
+        passwordResetToken: null,
+        passwordResetExpires: null,
+      })
+      .where(eq(users.id, user.id))
+
+    logger.info('Password reset successful', { email: user.email })
   },
 }

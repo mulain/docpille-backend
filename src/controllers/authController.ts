@@ -1,16 +1,15 @@
 import { Request, Response } from 'express'
-import { logger } from '../utils/logger'
 
 // local imports
 import { authService } from '../services/authService'
 import { loginSchema, forgotPasswordSchema, resetPasswordSchema } from '../utils/validations'
+import { UnauthorizedError } from '../utils/errors'
 
 export const authController = {
   async login(req: Request, res: Response) {
     const { email, password } = loginSchema.parse(req.body)
     const { user, token } = await authService.login(email, password)
 
-    // Set HTTP-only cookie
     res.cookie('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -22,7 +21,10 @@ export const authController = {
   },
 
   async getCurrentUser(req: Request, res: Response) {
-    const user = await authService.getCurrentUser(req.user?.id)
+    if (!req.user?.id) {
+      throw new UnauthorizedError('Not authenticated')
+    }
+    const user = await authService.getCurrentUser(req.user.id)
     res.json({ user })
   },
 
@@ -41,9 +43,8 @@ export const authController = {
   },
 
   async logout(req: Request, res: Response) {
-    logger.info('User logged out successfully')
     res.clearCookie('token')
-    res.json({ message: 'Logged out successfully' })
+    res.json({ message: 'Logged out' })
   },
 }
 // TODO: Implement refresh token

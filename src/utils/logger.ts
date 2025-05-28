@@ -4,8 +4,6 @@ const LOG_LEVELS = {
   ERROR: 'ERROR',
 } as const
 
-type LogLevel = (typeof LOG_LEVELS)[keyof typeof LOG_LEVELS]
-
 const getTimestamp = () => new Date().toISOString()
 
 export const logger = {

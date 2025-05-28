@@ -1,7 +1,10 @@
-- password security (currently just min 6)
+- password security (currently just min 6) + frontend obviously
 - review types folder, currently unorganized
-    - esp validation schemas all over the place and not streamlined
-- refactor db to contain users, not patients or doctors
 - patient endpoints are a mess
 - logging patient password in requestlogger because it logs the body?
 - rate limiter should apply to more (all?) routes, also reinstate correct n
+- Check for overexposure of expected errors (asyncHandler)
+- email resend queue
+- cleanup unverified accounts queue
+- refresh token
+- check migrate.ts file (currently unused)

@@ -10,32 +10,45 @@ interface EmailData {
   to: string
   subject: string
   template: string
-  data: Record<string, any>
+  data: Record<string, unknown>
 }
 
-const transporter = nodemailer.createTransport({
-  host: config.email.host,
-  port: config.email.port,
-  secure: config.email.port === 465, // true for 465, false for other ports
-  auth: {
-    user: config.email.user,
-    pass: config.email.pass,
-  },
-})
+const transporter =
+  config.nodeEnv === 'dev'
+    ? nodemailer.createTransport({
+        host: 'smtp.ethereal.email',
+        port: 587,
+        auth: {
+          user: 'jordyn.fay69@ethereal.email',
+          pass: 'vRBc1SczUNbTbTVBaa',
+        },
+      })
+    : nodemailer.createTransport({
+        host: config.email.host,
+        port: config.email.port,
+        secure: config.email.port === 465,
+        auth: {
+          user: config.email.user,
+          pass: config.email.pass,
+        },
+      })
 
 async function sendEmail({ to, subject, template, data }: EmailData): Promise<void> {
   try {
     const templatePath = path.join(__dirname, '..', 'templates', `${template}.ejs`)
     const html = await renderFile(templatePath, data)
 
-    await transporter.sendMail({
-      from: 'hello@demomailtrap.co', //TODO: config.email.fromEmail,
+    const info = await transporter.sendMail({
+      from: config.email.fromEmail,
       to,
       subject,
       html,
     })
 
     logger.info('Email sent successfully', { to, template })
+    if (config.nodeEnv === 'dev') {
+      logger.info(`Ethereal email preview URL: ${nodemailer.getTestMessageUrl(info)}`)
+    }
   } catch (error) {
     logger.error('Failed to send email', { to, template, error })
     // TODO: Inform admin, add retry logic

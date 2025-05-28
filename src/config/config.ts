@@ -74,7 +74,7 @@ const extractDatabaseName = (uri: string): string => {
     const url = new URL(uri)
     // Remove leading slash from pathname
     return url.pathname.slice(1)
-  } catch (error) {
+  } catch {
     throw new Error(`Invalid database URI format: ${uri}`)
   }
 }

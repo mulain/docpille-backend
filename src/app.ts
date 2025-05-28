@@ -13,6 +13,7 @@ import { requestLogger } from './middleware/requestLogger'
 import authRoutes from './routes/authRoutes'
 import registerRoutes from './routes/registerRoutes'
 import appointmentRoutes from './routes/appointmentRoutes'
+import doctorRoutes from './routes/doctorRoutes'
 
 const app = express()
 
@@ -31,6 +32,7 @@ app.use(requestLogger)
 app.use('/api/v1/auth', authRoutes)
 app.use('/api/v1/register', registerRoutes)
 app.use('/api/v1/appointments', appointmentRoutes)
+app.use('/api/v1/doctors', doctorRoutes)
 
 // Health check endpoint
 app.get('/health', (req, res) => {

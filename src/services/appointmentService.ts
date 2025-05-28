@@ -18,7 +18,6 @@ export const appointmentService = {
       throw new BadRequestError('"before" must be within 1 year from now')
     }
 
-    // Find available slots
     return db.query.appointments.findMany({
       where: and(
         eq(appointments.doctorId, doctorId),

@@ -55,7 +55,7 @@ export const registerService = {
     await emailService.sendVerificationEmail(user.email, verificationToken, user.firstName)
 
     logger.info('Patient registered', { email: user.email })
-    // shouldnt be returning all data
+    // TODO: check if we shouldnt be returning all data
     return { user, patient }
   },
 
@@ -92,11 +92,13 @@ export const registerService = {
     })
 
     if (!user) {
-      throw new UserNotFoundError()
+      logger.warn('User not found', { email })
+      return
     }
 
     if (user.isEmailVerified) {
-      throw new EmailAlreadyVerifiedError()
+      logger.warn('Email already verified', { email })
+      return
     }
 
     const verificationToken = generateRandomToken()

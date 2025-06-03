@@ -3,7 +3,7 @@ import { Router } from 'express'
 // local imports
 import { authController } from '../controllers/authController'
 import { asyncHandler } from '../middleware/asyncHandler'
-import { authenticate } from '../middleware/authenticate'
+import { authenticate } from '../middleware/authGuard'
 
 const router = Router()
 

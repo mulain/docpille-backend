@@ -12,6 +12,7 @@ export const doctorService = {
         firstName: users.firstName,
         lastName: users.lastName,
         specialization: doctors.specialization,
+        active: doctors.active,
       })
       .from(doctors)
       .innerJoin(users, eq(doctors.userId, users.id))

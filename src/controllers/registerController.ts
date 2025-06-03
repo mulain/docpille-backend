@@ -4,23 +4,7 @@ import { z } from 'zod'
 // local imports
 import { registerService } from '../services/registerService'
 import { BadRequestError } from '../utils/errors'
-
-const registerSchema = z.object({
-  firstName: z.string().min(2, 'First name must be at least 2 characters'),
-  lastName: z.string().min(2, 'Last name must be at least 2 characters'),
-  email: z
-    .string()
-    .email('Invalid email address')
-    .transform(val => val.toLowerCase()),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-})
-
-const resendVerificationSchema = z.object({
-  email: z
-    .string()
-    .email('Invalid email address')
-    .transform(val => val.toLowerCase()),
-})
+import { emailSchema, registerSchema } from '../utils/validations'
 
 export const registerController = {
   async register(req: Request, res: Response) {
@@ -36,11 +20,11 @@ export const registerController = {
     }
 
     await registerService.verifyEmail(token)
-    res.json({ success: true, message: 'Email verified successfully' })
+    res.json({ message: 'Email verified successfully' })
   },
 
   async resendVerification(req: Request, res: Response) {
-    const { email } = resendVerificationSchema.parse(req.body)
+    const email = emailSchema.parse(req.body.email)
     await registerService.resendVerificationToken(email)
     res.json({
       message:

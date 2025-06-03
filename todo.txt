@@ -4,7 +4,9 @@
 - logging patient password in requestlogger because it logs the body?
 - rate limiter should apply to more (all?) routes, also reinstate correct n
 - Check for overexposure of expected errors (asyncHandler)
+    - actually, this should not be the handler's responsibility. instead, logger.warn and don't throw error
 - email resend queue
 - cleanup unverified accounts queue
 - refresh token
 - check migrate.ts file (currently unused)
+- implement logger

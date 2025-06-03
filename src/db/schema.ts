@@ -38,8 +38,8 @@ export const doctors = pgTable('doctors', {
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' })
     .unique(),
-  specialization: text('specialization').notNull(),
-  licenseNumber: text('license_number').notNull().unique(),
+  specialization: text('specialization'),
+  active: boolean('active').notNull().default(false),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })

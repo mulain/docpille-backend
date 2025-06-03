@@ -61,10 +61,15 @@ export const emailService = {
     await sendEmail({
       to: email,
       subject: 'Verify Your Email - DocPille',
-      template: 'verification',
+      template: 'unified-action',
       data: {
-        firstName,
-        verificationUrl,
+        title: 'Welcome to DocPille!',
+        greeting: firstName,
+        message:
+          'Please click the button below to verify your email address and activate your account.',
+        buttonText: 'Verify Email',
+        buttonUrl: verificationUrl,
+        expiryText: 'This link will expire in 24 hours.',
       },
     })
   },
@@ -74,10 +79,33 @@ export const emailService = {
     await sendEmail({
       to: email,
       subject: 'Reset Your Password - DocPille',
-      template: 'password-reset',
+      template: 'unified-action',
       data: {
-        firstName,
-        resetUrl,
+        title: 'Reset Your Password - DocPille',
+        greeting: firstName,
+        message:
+          'We received a request to reset your password. Please click the button below to create a new password.',
+        buttonText: 'Reset Password',
+        buttonUrl: resetUrl,
+        expiryText: 'This link will expire in 1 hour.',
+      },
+    })
+  },
+
+  async sendDoctorInviteEmail(email: string, token: string, firstName: string): Promise<void> {
+    const inviteUrl = `${config.frontendUrl}/reset-password?token=${token}`
+    await sendEmail({
+      to: email,
+      subject: 'Join DocPille as a Doctor!',
+      template: 'unified-action',
+      data: {
+        title: 'You are invited to join DocPille as a Doctor',
+        greeting: firstName,
+        message:
+          'You have been invited to join DocPille as a doctor. Please click the button below to set your password and complete your registration.',
+        buttonText: 'Set Your Password',
+        buttonUrl: inviteUrl,
+        expiryText: 'This link will expire in 24 hours.',
       },
     })
   },

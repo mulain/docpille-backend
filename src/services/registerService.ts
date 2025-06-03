@@ -6,17 +6,15 @@ import { users, patients, userRoleEnum } from '../db/schema'
 import { hashPassword, generateRandomToken } from '../utils/auth'
 import { logger } from '../utils/logger'
 import { emailService } from '../services/emailService'
-import { CreatePatientDTO } from '../types/patient'
+import { RegisterDTO } from '../utils/validations'
 import {
   EmailExistsError,
   InvalidVerificationTokenError,
   ExpiredVerificationTokenError,
-  UserNotFoundError,
-  EmailAlreadyVerifiedError,
 } from '../utils/errors'
 
 export const registerService = {
-  async registerPatient(data: CreatePatientDTO) {
+  async registerPatient(data: RegisterDTO) {
     const existingUser = await db.query.users.findFirst({
       where: eq(users.email, data.email),
     })
@@ -36,8 +34,6 @@ export const registerService = {
         passwordHash: await hashPassword(data.password),
         firstName: data.firstName,
         lastName: data.lastName,
-        phoneNumber: data.phoneNumber,
-        address: data.address,
         role: 'PATIENT' as (typeof userRoleEnum.enumValues)[number],
         emailVerificationToken: verificationToken,
         emailVerificationExpires: verificationExpires,
@@ -48,7 +44,6 @@ export const registerService = {
       .insert(patients)
       .values({
         userId: user.id,
-        dateOfBirth: data.dateOfBirth,
       })
       .returning()
 

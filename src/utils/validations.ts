@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-// basic validators
+// basic schemas
 export const uuidSchema = z.string().uuid({ message: 'Must be a valid UUID' })
 
 export const utcDateSchema = z
@@ -16,9 +16,24 @@ export const emailSchema = z
   .email('Invalid email address')
   .transform(val => val.trim().toLowerCase())
 
-export const passwordSchema = z.string().min(6, 'Password must be at least 6 characters')
+export const passwordSchema = z
+  .string()
+  .min(6, 'Password must be at least 6 characters')
+  .max(100, 'Password is too long')
 
-// endpoint validators
+export const firstNameSchema = z.string().min(2, 'First name must be at least 2 characters')
+
+export const lastNameSchema = z.string().min(2, 'Last name must be at least 2 characters')
+
+export const specializationSchema = z
+  .string()
+  .transform(val => (val.trim() === '' ? null : val.trim()))
+  .nullable()
+  .refine(val => val === null || val.length >= 2, {
+    message: 'Specialization must be at least 2 characters',
+  })
+
+// combined schemas
 export const availableAppointmentsQuerySchema = z.object({
   doctorId: uuidSchema,
   after: utcDateSchema,
@@ -38,3 +53,21 @@ export const resetPasswordSchema = z.object({
   token: z.string(),
   password: passwordSchema,
 })
+
+export const registerSchema = z.object({
+  firstName: firstNameSchema,
+  lastName: lastNameSchema,
+  email: emailSchema,
+  password: passwordSchema,
+})
+
+export type RegisterDTO = z.infer<typeof registerSchema>
+
+export const createDoctorSchema = z.object({
+  firstName: firstNameSchema,
+  lastName: lastNameSchema,
+  email: emailSchema,
+  specialization: specializationSchema,
+})
+
+export type CreateDoctorDTO = z.infer<typeof createDoctorSchema>

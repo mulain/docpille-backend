@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { asyncHandler } from '../middleware/asyncHandler'
-import { authenticate } from '../middleware/authenticate'
+import { authenticate } from '../middleware/authGuard'
 import { appointmentController } from '../controllers/appointmentController'
 
 const router = Router()

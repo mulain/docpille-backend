@@ -22,4 +22,6 @@ router.patch(
   asyncHandler(adminController.activateDoctor)
 )
 
+router.patch('/doctors/:id', authenticate, requireAdmin, asyncHandler(adminController.editDoctor))
+
 export default router

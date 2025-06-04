@@ -27,11 +27,15 @@ export const lastNameSchema = z.string().min(2, 'Last name must be at least 2 ch
 
 export const specializationSchema = z
   .string()
-  .transform(val => (val.trim() === '' ? null : val.trim()))
+  .trim()
+  .min(2, 'Specialization must be at least 2 characters')
+  .or(z.literal('').transform(() => undefined))
   .nullable()
-  .refine(val => val === null || val.length >= 2, {
-    message: 'Specialization must be at least 2 characters',
-  })
+  .optional()
+
+export const phoneNumberSchema = z.string().min(10, 'Phone number must be at least 10 characters')
+
+export const addressSchema = z.string().min(2, 'Address must be at least 2 characters')
 
 // combined schemas
 export const availableAppointmentsQuerySchema = z.object({
@@ -71,3 +75,16 @@ export const createDoctorSchema = z.object({
 })
 
 export type CreateDoctorDTO = z.infer<typeof createDoctorSchema>
+
+export const editDoctorSchema = z
+  .object({
+    firstName: firstNameSchema,
+    lastName: lastNameSchema,
+    specialization: specializationSchema,
+    active: z.boolean(),
+    phoneNumber: phoneNumberSchema,
+    address: addressSchema,
+  })
+  .partial()
+
+export type EditDoctorDTO = z.infer<typeof editDoctorSchema>

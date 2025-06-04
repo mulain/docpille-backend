@@ -11,7 +11,10 @@ export const doctorService = {
         id: doctors.id,
         firstName: users.firstName,
         lastName: users.lastName,
+        email: users.email,
         specialization: doctors.specialization,
+        phoneNumber: users.phoneNumber,
+        address: users.address,
         active: doctors.active,
       })
       .from(doctors)

@@ -14,6 +14,12 @@ router.get(
   })
 )
 
+// List available appointments for a doctor in a time range
+router.get('/available', authenticate, asyncHandler(appointmentController.available))
+
+// List doctor's appointments
+router.get('/doctor', authenticate, requireDoctor, asyncHandler(appointmentController.listSlots))
+
 // Get appointment by ID
 router.get(
   '/:id',
@@ -42,8 +48,5 @@ router.delete(
     res.status(501).json({ message: 'Delete appointment not implemented' })
   })
 )
-
-// List available appointments for a doctor in a time range
-router.get('/available', authenticate, asyncHandler(appointmentController.available))
 
 export default router

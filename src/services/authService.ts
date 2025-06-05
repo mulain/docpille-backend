@@ -35,6 +35,10 @@ export const authService = {
       throw new UnauthorizedError('Invalid email or password')
     }
 
+    if (!user.isEmailVerified) {
+      throw new UnauthorizedError('Please verify your email before logging in')
+    }
+
     const token = generateToken(user.id, user.email, user.role)
 
     logger.info('Login successful', { email })

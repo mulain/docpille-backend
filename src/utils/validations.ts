@@ -11,10 +11,6 @@ export const utcDateSchema = z
   .refine(val => !isNaN(Date.parse(val)), { message: 'Must be a valid date' })
   .transform(val => new Date(val))
 
-const time24HourSchema = z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, {
-  message: 'Must be a valid time in 24-hour format (HH:mm)',
-})
-
 export const emailSchema = z
   .string()
   .email('Invalid email address')

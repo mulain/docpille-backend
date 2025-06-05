@@ -73,11 +73,11 @@ export const appointmentService = {
     const overlapConditions = newSlots.map(slot =>
       and(lt(appointments.startTime, slot.endTime), gt(appointments.endTime, slot.startTime))
     )
-  
+
     const existingOverlap = await db.query.appointments.findFirst({
       where: and(eq(appointments.doctorId, doctorId), or(...overlapConditions)),
     })
-  
+
     if (existingOverlap) {
       throw new BadRequestError('One or more new slots overlap with existing slots')
     }
@@ -120,5 +120,31 @@ export const appointmentService = {
     })
 
     return createdSlots
+  },
+
+  async listSlots(userId: string, after: Date, before: Date) {
+    const doctor = await db.query.doctors.findFirst({
+      where: eq(doctors.userId, userId),
+    })
+
+    if (!doctor) {
+      throw new ForbiddenError('User is not a doctor')
+    }
+
+    return db.query.appointments.findMany({
+      where: and(
+        eq(appointments.doctorId, doctor.id),
+        gte(appointments.startTime, after),
+        lte(appointments.endTime, before)
+      ),
+      columns: {
+        id: true,
+        doctorId: true,
+        startTime: true,
+        endTime: true,
+        patientId: true,
+        reservedBy: true,
+      },
+    })
   },
 }

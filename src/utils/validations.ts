@@ -11,6 +11,10 @@ export const utcDateSchema = z
   .refine(val => !isNaN(Date.parse(val)), { message: 'Must be a valid date' })
   .transform(val => new Date(val))
 
+const time24HourSchema = z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, {
+  message: 'Must be a valid time in 24-hour format (HH:mm)',
+})
+
 export const emailSchema = z
   .string()
   .email('Invalid email address')
@@ -33,9 +37,21 @@ export const specializationSchema = z
   .nullable()
   .optional()
 
-export const phoneNumberSchema = z.string().min(10, 'Phone number must be at least 10 characters')
+export const phoneNumberSchema = z
+  .string()
+  .trim()
+  .min(2, 'Phone number must be at least 2 characters')
+  .or(z.literal('').transform(() => undefined))
+  .nullable()
+  .optional()
 
-export const addressSchema = z.string().min(2, 'Address must be at least 2 characters')
+export const addressSchema = z
+  .string()
+  .trim()
+  .min(2, 'Address must be at least 2 characters')
+  .or(z.literal('').transform(() => undefined))
+  .nullable()
+  .optional()
 
 // combined schemas
 export const availableAppointmentsQuerySchema = z.object({
@@ -43,6 +59,19 @@ export const availableAppointmentsQuerySchema = z.object({
   after: utcDateSchema,
   before: utcDateSchema,
 })
+
+export const createAppointmentSlotsSchema = z.object({
+  slots: z
+    .array(
+      z.object({
+        startTime: utcDateSchema,
+        endTime: utcDateSchema,
+      })
+    )
+    .min(1, 'At least one slot must be provided'),
+})
+
+export type CreateAppointmentSlotsDTO = z.infer<typeof createAppointmentSlotsSchema>
 
 export const loginSchema = z.object({
   email: emailSchema,

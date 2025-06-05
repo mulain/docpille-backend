@@ -10,3 +10,4 @@
 - refresh token
 - check migrate.ts file (currently unused)
 - implement logger
+- what about min slot duration, min slot separation, max slots per day, earliest / latest slot enforcement?

@@ -1,6 +1,6 @@
 import { Router } from 'express'
 import { asyncHandler } from '../middleware/asyncHandler'
-import { authenticate } from '../middleware/authGuard'
+import { authenticate, requireDoctor } from '../middleware/authGuard'
 import { appointmentController } from '../controllers/appointmentController'
 
 const router = Router()
@@ -23,14 +23,7 @@ router.get(
   })
 )
 
-// Create a new appointment
-router.post(
-  '/',
-  asyncHandler(async (req, res) => {
-    // TODO: Implement create appointment
-    res.status(501).json({ message: 'Create appointment not implemented' })
-  })
-)
+router.post('/', authenticate, requireDoctor, asyncHandler(appointmentController.createSlots))
 
 // Update an appointment by ID
 router.put(

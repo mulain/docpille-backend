@@ -14,10 +14,14 @@ router.get(
   })
 )
 
-// List available appointments for a doctor in a time range
-router.get('/available', authenticate, asyncHandler(appointmentController.available))
+// List available appointments for a doctor starting at a specific date
+router.get(
+  '/available/:doctorId/:startDate',
+  authenticate,
+  asyncHandler(appointmentController.availableSlots)
+)
 
-// List doctor's appointments
+// List a doctor's own appointments
 router.get('/doctor', authenticate, requireDoctor, asyncHandler(appointmentController.listSlots))
 
 // Get appointment by ID

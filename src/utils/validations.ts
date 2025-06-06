@@ -56,6 +56,13 @@ export const availableAppointmentsQuerySchema = z.object({
   before: utcDateSchema,
 })
 
+export const availableSlotsPathSchema = z.object({
+  doctorId: uuidSchema,
+  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
+    message: 'Must be a valid date in YYYY-MM-DD format',
+  }),
+})
+
 export const createAppointmentSlotsSchema = z.object({
   slots: z
     .array(

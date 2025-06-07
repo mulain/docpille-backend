@@ -1,10 +1,13 @@
-import { and, eq, isNull, gte, lte, lt, gt, or } from 'drizzle-orm'
+import { and, eq, isNull, gte, lte, lt, gt, or, sql } from 'drizzle-orm'
+import { alias } from 'drizzle-orm/pg-core'
 
 // local imports
 import { db } from '../db'
-import { appointments, doctors } from '../db/schema'
+import { appointments, doctors, users, patients } from '../db/schema'
 import { BadRequestError, ForbiddenError } from '../utils/errors'
 import { CreateAppointmentSlotsDTO } from '../utils/validations'
+import { doctorService } from './doctorService'
+import { AppointmentSlot } from '../types/appointments'
 
 export const appointmentService = {
   async available(doctorId: string, after: Date, before: Date) {
@@ -23,7 +26,6 @@ export const appointmentService = {
       where: and(
         eq(appointments.doctorId, doctorId),
         isNull(appointments.patientId),
-        isNull(appointments.reservedBy),
         gte(appointments.startTime, after),
         lte(appointments.endTime, before)
       ),
@@ -84,14 +86,7 @@ export const appointmentService = {
   },
 
   async createSlots(userId: string, data: CreateAppointmentSlotsDTO) {
-    const doctor = await db.query.doctors.findFirst({
-      where: eq(doctors.userId, userId),
-    })
-
-    if (!doctor) {
-      throw new ForbiddenError('User is not a doctor')
-    }
-
+    const doctor = await doctorService.assertIsDoctor(userId)
     const now = Date.now()
 
     const slots = data.slots.map(({ startTime: startStr, endTime: endStr }) => {
@@ -122,29 +117,69 @@ export const appointmentService = {
     return createdSlots
   },
 
-  async listSlots(userId: string, after: Date, before: Date) {
-    const doctor = await db.query.doctors.findFirst({
-      where: eq(doctors.userId, userId),
+  async getMySlots(userId: string, after: Date, before: Date): Promise<AppointmentSlot[]> {
+    const doctor = await doctorService.assertIsDoctor(userId)
+
+    const patientUser = alias(users, 'patientUser')
+    const patientAlias = alias(patients, 'patientAlias')
+
+    return (await db
+      .select({
+        appointmentId: appointments.id,
+        doctorId: appointments.doctorId,
+        startTime: appointments.startTime,
+        endTime: appointments.endTime,
+        bookedAt: appointments.bookedAt,
+        reservedUntil: appointments.reservedUntil,
+        reason: appointments.reason,
+        patientNotes: appointments.patientNotes,
+        doctorNotes: appointments.doctorNotes,
+        videoCall: appointments.videoCall,
+        createdAt: appointments.createdAt,
+        updatedAt: appointments.updatedAt,
+        status: sql`
+          CASE
+            WHEN ${appointments.bookedAt} IS NOT NULL THEN 'BOOKED'
+            WHEN ${appointments.reservedUntil} IS NOT NULL THEN 'RESERVED'
+            ELSE 'AVAILABLE'
+          END
+        `.as('status'),
+
+        patient: {
+          id: patientUser.id,
+          firstName: patientUser.firstName,
+          lastName: patientUser.lastName,
+          email: patientUser.email,
+          phoneNumber: patientUser.phoneNumber,
+        },
+      })
+      .from(appointments)
+      .leftJoin(patientAlias, eq(appointments.patientId, patientAlias.id))
+      .leftJoin(patientUser, eq(patientAlias.userId, patientUser.id))
+      .where(
+        and(
+          eq(appointments.doctorId, doctor.id),
+          gte(appointments.startTime, after),
+          lte(appointments.endTime, before)
+        )
+      )) as AppointmentSlot[]
+  },
+
+  async deleteSlot(userId: string, slotId: string) {
+    const doctor = await doctorService.assertIsDoctor(userId)
+
+    const slot = await db.query.appointments.findFirst({
+      where: and(eq(appointments.id, slotId), eq(appointments.doctorId, doctor.id)),
     })
 
-    if (!doctor) {
-      throw new ForbiddenError('User is not a doctor')
+    if (!slot) {
+      throw new ForbiddenError('Slot not found or you do not have permission to delete it')
     }
 
-    return db.query.appointments.findMany({
-      where: and(
-        eq(appointments.doctorId, doctor.id),
-        gte(appointments.startTime, after),
-        lte(appointments.endTime, before)
-      ),
-      columns: {
-        id: true,
-        doctorId: true,
-        startTime: true,
-        endTime: true,
-        patientId: true,
-        reservedBy: true,
-      },
-    })
+    if (slot.patientId) {
+      throw new BadRequestError('Cannot delete a slot that is booked or reserved')
+    }
+
+    await db.delete(appointments).where(eq(appointments.id, slotId))
   },
 }

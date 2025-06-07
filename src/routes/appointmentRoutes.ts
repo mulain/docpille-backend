@@ -44,13 +44,6 @@ router.put(
   })
 )
 
-// Delete an appointment by ID
-router.delete(
-  '/:id',
-  asyncHandler(async (req, res) => {
-    // TODO: Implement delete appointment
-    res.status(501).json({ message: 'Delete appointment not implemented' })
-  })
-)
+router.delete('/:id', authenticate, requireDoctor, asyncHandler(appointmentController.deleteSlot))
 
 export default router

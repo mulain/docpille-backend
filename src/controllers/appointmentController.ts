@@ -26,7 +26,7 @@ export const appointmentController = {
     const { after, before } = availableAppointmentsQuerySchema
       .omit({ doctorId: true })
       .parse(req.query)
-    const slots = await appointmentService.listSlots(req.user!.id, after, before)
+    const slots = await appointmentService.getMySlots(req.user!.id, after, before)
     res.json({ slots })
   },
 
@@ -34,5 +34,11 @@ export const appointmentController = {
     const data = createAppointmentSlotsSchema.parse(req.body)
     const slots = await appointmentService.createSlots(req.user!.id, data)
     res.status(201).json({ slots })
+  },
+
+  async deleteSlot(req: Request, res: Response) {
+    const { id } = req.params
+    await appointmentService.deleteSlot(req.user!.id, id)
+    res.status(204).send()
   },
 }

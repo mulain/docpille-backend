@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm'
 // local imports
 import { db } from '../db'
 import { doctors, users } from '../db/schema'
+import { ForbiddenError } from '../utils/errors'
 
 export const doctorService = {
   async getAllDoctors() {
@@ -22,5 +23,17 @@ export const doctorService = {
       .orderBy(users.lastName, users.firstName)
 
     return result
+  },
+
+  async assertIsDoctor(userId: string) {
+    const doctor = await db.query.doctors.findFirst({
+      where: eq(doctors.userId, userId),
+    })
+
+    if (!doctor) {
+      throw new ForbiddenError('User is not a doctor')
+    }
+
+    return doctor
   },
 }

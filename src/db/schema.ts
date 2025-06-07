@@ -66,7 +66,6 @@ export const appointments = pgTable('appointments', {
 
   // status
   bookedAt: timestamp('booked_at', { withTimezone: true }),
-  reservedBy: uuid('reserved_by').references(() => users.id),
   reservedUntil: timestamp('reserved_until', { withTimezone: true }),
 
   // details

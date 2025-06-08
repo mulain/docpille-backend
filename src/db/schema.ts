@@ -44,13 +44,6 @@ export const doctors = pgTable('doctors', {
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })
 
-/**
- * Slot availability is derived from:
- * - reservedBy: if present and patientId is null, the slot is reserved
- * - patientId: if present, the slot is booked
- * - both null: the slot is available
- */
-
 export const appointments = pgTable('appointments', {
   id: uuid('id').primaryKey().defaultRandom(),
 

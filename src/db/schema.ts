@@ -10,6 +10,8 @@ export const users = pgTable('users', {
   lastName: text('last_name').notNull(),
   phoneNumber: text('phone_number'),
   address: text('address'),
+  dateOfBirth: text('date_of_birth'),
+  gender: text('gender'),
   role: userRoleEnum('role').notNull().default('PATIENT'),
   isEmailVerified: boolean('is_email_verified').notNull().default(false),
   emailVerificationToken: text('email_verification_token'),
@@ -27,7 +29,6 @@ export const patients = pgTable('patients', {
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' })
     .unique(),
-  dateOfBirth: text('date_of_birth'),
   createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp('updated_at', { withTimezone: true }).notNull().defaultNow(),
 })

@@ -48,18 +48,6 @@ export const authService = {
     }
   },
 
-  async getCurrentUser(userId: string) {
-    const user = await db.query.users.findFirst({
-      where: eq(users.id, userId),
-    })
-
-    if (!user) {
-      return null
-    }
-
-    return prepareUserResponse(user)
-  },
-
   async forgotPassword(email: string) {
     const user = await db.query.users.findFirst({
       where: eq(users.email, email),

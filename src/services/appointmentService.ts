@@ -10,16 +10,17 @@ import { doctorService } from './doctorService'
 import { AppointmentSlot } from '../types/appointments'
 
 export const appointmentService = {
-  async available(doctorId: string, after: Date, before: Date) {
+  async availableSlotsByDoctorId(doctorId: string, after: Date, before: Date) {
     const now = new Date()
     const maxBefore = new Date()
     maxBefore.setUTCFullYear(now.getUTCFullYear() + 1)
 
     if (after < now) {
-      throw new BadRequestError('"after" must not be in the past')
+      after = now
     }
+
     if (before > maxBefore) {
-      throw new BadRequestError('"before" must be within 1 year from now')
+      throw new BadRequestError('Max query range is 1 year from current date')
     }
 
     return db.query.appointments.findMany({
@@ -152,7 +153,8 @@ export const appointmentService = {
           lastName: users.lastName,
           email: users.email,
           phoneNumber: users.phoneNumber,
-          dateOfBirth: patients.dateOfBirth,
+          dateOfBirth: users.dateOfBirth,
+          gender: users.gender,
         },
       })
       .from(appointments)

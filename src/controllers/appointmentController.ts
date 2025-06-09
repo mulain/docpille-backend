@@ -1,31 +1,18 @@
 import { Request, Response } from 'express'
-import { addDays } from 'date-fns'
 
 // local imports
 import { appointmentService } from '../services/appointmentService'
-import {
-  availableAppointmentsQuerySchema,
-  availableSlotsPathSchema,
-  createAppointmentSlotsSchema,
-} from '../utils/validations'
+import { availableSlotsQuerySchema, createAppointmentSlotsSchema } from '../utils/validations'
 
 export const appointmentController = {
-  async availableSlots(req: Request, res: Response) {
-    const { doctorId, startDate } = availableSlotsPathSchema.parse(req.params)
-
-    // Convert startDate to UTC midnight
-    const start = new Date(`${startDate}T00:00:00Z`)
-    // Default to 7 days from start date
-    const end = addDays(start, 7)
-
-    const slots = await appointmentService.available(doctorId, start, end)
+  async getAvailableSlotsByDoctorId(req: Request, res: Response) {
+    const { doctorId, after, before } = availableSlotsQuerySchema.parse(req.query)
+    const slots = await appointmentService.availableSlotsByDoctorId(doctorId, after, before)
     res.json({ slots })
   },
 
   async getMySlotsDoctor(req: Request, res: Response) {
-    const { after, before } = availableAppointmentsQuerySchema
-      .omit({ doctorId: true })
-      .parse(req.query)
+    const { after, before } = availableSlotsQuerySchema.omit({ doctorId: true }).parse(req.query)
     const slots = await appointmentService.getMySlotsDoctor(req.user!.id, after, before)
     res.json({ slots })
   },

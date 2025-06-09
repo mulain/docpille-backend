@@ -1,13 +1,22 @@
 import { Router } from 'express'
 
 // local imports
-import { authController } from '../controllers/authController'
 import { asyncHandler } from '../middleware/asyncHandler'
-import { authenticate } from '../middleware/authGuard'
+import { authController } from '../controllers/authController'
 
 const router = Router()
 
+// Login
 router.post('/login', asyncHandler(authController.login))
+
+// Logout
+router.post('/logout', asyncHandler(authController.logout))
+
+// Forgot password
+router.post('/forgot-password', asyncHandler(authController.forgotPassword))
+
+// Reset password
+router.post('/reset-password', asyncHandler(authController.resetPassword))
 
 // TODO: Implement refresh token
 router.post(
@@ -17,13 +26,5 @@ router.post(
     res.status(501).json({ message: 'Token refresh not implemented yet' })
   })
 )
-
-router.post('/forgot-password', asyncHandler(authController.forgotPassword))
-
-router.post('/reset-password', asyncHandler(authController.resetPassword))
-
-router.get('/me', authenticate, asyncHandler(authController.getCurrentUser))
-
-router.post('/logout', asyncHandler(authController.logout))
 
 export default router

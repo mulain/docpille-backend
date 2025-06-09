@@ -25,6 +25,22 @@ export const doctorService = {
     return result
   },
 
+  async getActiveDoctors() {
+    const result = await db
+      .select({
+        id: doctors.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        specialization: doctors.specialization,
+      })
+      .from(doctors)
+      .innerJoin(users, eq(doctors.userId, users.id))
+      .where(eq(doctors.active, true))
+      .orderBy(users.lastName, users.firstName)
+
+    return result
+  },
+
   async assertIsDoctor(userId: string) {
     const doctor = await db.query.doctors.findFirst({
       where: eq(doctors.userId, userId),

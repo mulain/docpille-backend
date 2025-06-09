@@ -14,11 +14,11 @@ router.get(
   })
 )
 
-// List available appointments for a doctor starting at a specific date
+// List available appointments for a doctor by year and month
 router.get(
-  '/available/:doctorId/:startDate',
+  '/available',
   authenticate,
-  asyncHandler(appointmentController.availableSlots)
+  asyncHandler(appointmentController.getAvailableSlotsByDoctorId)
 )
 
 // List a doctor's own appointments

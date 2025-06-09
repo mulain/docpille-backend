@@ -20,12 +20,9 @@ export const authController = {
     res.json({ user })
   },
 
-  async getCurrentUser(req: Request, res: Response) {
-    if (!req.user?.id) {
-      throw new UnauthorizedError('Not authenticated')
-    }
-    const user = await authService.getCurrentUser(req.user.id)
-    res.json({ user })
+  async logout(req: Request, res: Response) {
+    res.clearCookie('token')
+    res.json({ message: 'Logged out' })
   },
 
   async forgotPassword(req: Request, res: Response) {
@@ -42,9 +39,9 @@ export const authController = {
     res.json({ message: 'Password has been reset successfully' })
   },
 
-  async logout(req: Request, res: Response) {
-    res.clearCookie('token')
-    res.json({ message: 'Logged out' })
-  },
+/*   async refreshToken(req: Request, res: Response) {
+    const { token } = req.body
+    const { user, token: newToken } = await authService.refreshToken(token)
+    res.json({ user, token: newToken })
+  }, */
 }
-// TODO: Implement refresh token

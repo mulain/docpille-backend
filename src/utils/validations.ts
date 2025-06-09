@@ -1,3 +1,4 @@
+import { isBefore, parseISO, subYears, isValid } from 'date-fns'
 import { z } from 'zod'
 
 // basic schemas
@@ -25,6 +26,18 @@ export const firstNameSchema = z.string().min(2, 'First name must be at least 2 
 
 export const lastNameSchema = z.string().min(2, 'Last name must be at least 2 characters')
 
+export const dateOfBirthSchema = z
+  .string()
+  .refine(val => isValid(parseISO(val)), {
+    message: 'Must be a valid date in YYYY-MM-DD format',
+  })
+  .refine(val => isBefore(parseISO(val), new Date()), {
+    message: 'Date must be in the past',
+  })
+  .refine(val => isBefore(parseISO(val), subYears(new Date(), 18)), {
+    message: 'You must be at least 18 years old',
+  })
+
 export const specializationSchema = z
   .string()
   .trim()
@@ -49,18 +62,15 @@ export const addressSchema = z
   .nullable()
   .optional()
 
+export const genderSchema = z.enum(['MALE', 'FEMALE', 'OTHER'], {
+  message: 'Must be a valid gender',
+})
+
 // combined schemas
-export const availableAppointmentsQuerySchema = z.object({
+export const availableSlotsQuerySchema = z.object({
   doctorId: uuidSchema,
   after: utcDateSchema,
   before: utcDateSchema,
-})
-
-export const availableSlotsPathSchema = z.object({
-  doctorId: uuidSchema,
-  startDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, {
-    message: 'Must be a valid date in YYYY-MM-DD format',
-  }),
 })
 
 export const createAppointmentSlotsSchema = z.object({
@@ -120,3 +130,19 @@ export const editDoctorSchema = z
   .partial()
 
 export type EditDoctorDTO = z.infer<typeof editDoctorSchema>
+
+export const updateProfileSchema = z
+  .object({
+    email: emailSchema,
+    password: passwordSchema,
+    firstName: firstNameSchema,
+    lastName: lastNameSchema,
+    phoneNumber: phoneNumberSchema,
+    address: addressSchema,
+    dateOfBirth: dateOfBirthSchema,
+    gender: genderSchema,
+    specialization: specializationSchema,
+  })
+  .partial()
+
+export type UpdateProfileDTO = z.infer<typeof updateProfileSchema>

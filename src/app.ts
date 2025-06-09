@@ -15,6 +15,7 @@ import registerRoutes from './routes/registerRoutes'
 import appointmentRoutes from './routes/appointmentRoutes'
 import doctorRoutes from './routes/doctorRoutes'
 import adminRoutes from './routes/adminRoutes'
+import userRoutes from './routes/userRoutes'
 
 const app = express()
 
@@ -35,6 +36,7 @@ app.use('/api/v1/register', registerRoutes)
 app.use('/api/v1/appointments', appointmentRoutes)
 app.use('/api/v1/doctors', doctorRoutes)
 app.use('/api/v1/admin', adminRoutes)
+app.use('/api/v1/users', userRoutes)
 
 // Health check endpoint
 app.get('/health', (_req, res) => {

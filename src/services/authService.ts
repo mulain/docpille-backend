@@ -67,7 +67,6 @@ export const authService = {
 
     if (!user) {
       logger.info('Email not found', { email })
-      // Not throwing an error to not reveal if email exists
       return
     }
 
@@ -98,6 +97,20 @@ export const authService = {
 
     if (user.passwordResetExpires && user.passwordResetExpires < new Date()) {
       throw new ExpiredPasswordResetTokenError()
+    }
+
+    // TODO: change this to its own route
+    // Currently, signing up doctors uses this route, so we need to verify the email
+    if (!user.isEmailVerified) {
+      await db
+        .update(users)
+        .set({
+          isEmailVerified: true,
+          verifiedAt: new Date(),
+          emailVerificationToken: null,
+          emailVerificationExpires: null,
+        })
+        .where(eq(users.id, user.id))
     }
 
     await db

@@ -117,7 +117,7 @@ export const appointmentService = {
     return createdSlots
   },
 
-  async getMySlots(userId: string, after: Date, before: Date): Promise<AppointmentSlot[]> {
+  async getMySlotsDoctor(userId: string, after: Date, before: Date): Promise<AppointmentSlot[]> {
     const doctor = await doctorService.assertIsDoctor(userId)
 
     const patientUser = alias(users, 'patientUser')
@@ -141,21 +141,23 @@ export const appointmentService = {
           CASE
             WHEN ${appointments.bookedAt} IS NOT NULL THEN 'BOOKED'
             WHEN ${appointments.reservedUntil} IS NOT NULL THEN 'RESERVED'
+            WHEN ${appointments.startTime} < NOW() AND ${appointments.bookedAt} IS NULL THEN 'EXPIRED'
             ELSE 'AVAILABLE'
           END
         `.as('status'),
 
         patient: {
-          id: patientUser.id,
-          firstName: patientUser.firstName,
-          lastName: patientUser.lastName,
-          email: patientUser.email,
-          phoneNumber: patientUser.phoneNumber,
+          id: patients.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email,
+          phoneNumber: users.phoneNumber,
+          dateOfBirth: patients.dateOfBirth,
         },
       })
       .from(appointments)
-      .leftJoin(patientAlias, eq(appointments.patientId, patientAlias.id))
-      .leftJoin(patientUser, eq(patientAlias.userId, patientUser.id))
+      .leftJoin(patients, eq(appointments.patientId, patients.id))
+      .leftJoin(users, eq(patients.userId, users.id))
       .where(
         and(
           eq(appointments.doctorId, doctor.id),

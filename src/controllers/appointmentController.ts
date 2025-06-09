@@ -22,11 +22,11 @@ export const appointmentController = {
     res.json({ slots })
   },
 
-  async listSlots(req: Request, res: Response) {
+  async getMySlotsDoctor(req: Request, res: Response) {
     const { after, before } = availableAppointmentsQuerySchema
       .omit({ doctorId: true })
       .parse(req.query)
-    const slots = await appointmentService.getMySlots(req.user!.id, after, before)
+    const slots = await appointmentService.getMySlotsDoctor(req.user!.id, after, before)
     res.json({ slots })
   },
 

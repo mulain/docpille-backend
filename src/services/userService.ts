@@ -1,10 +1,10 @@
 import { eq } from 'drizzle-orm'
+import { UpdateProfileDTO } from '@m-oss/types'
 
 // local imports
 import { db } from '../db'
 import { users } from '../db/schema'
 import { prepareUserResponse } from '../utils/auth'
-import { UpdateProfileDTO } from '../utils/validations'
 
 export const userService = {
   async getCurrentUser(userId: string) {

@@ -7,7 +7,7 @@ import { emailVerificationLimiter } from '../middleware/rateLimiter'
 
 const router = Router()
 
-router.post('/', asyncHandler(registerController.register))
+router.post('/', asyncHandler(registerController.registerPatient))
 
 router.get('/verify-email', emailVerificationLimiter, asyncHandler(registerController.verifyEmail))
 

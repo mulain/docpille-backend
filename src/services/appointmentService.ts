@@ -1,13 +1,12 @@
 import { and, eq, isNull, gte, lte, lt, gt, or, sql } from 'drizzle-orm'
-import { alias } from 'drizzle-orm/pg-core'
+import { CreateSlotsDTO } from '@m-oss/types'
 
 // local imports
 import { db } from '../db'
 import { appointments, doctors, users, patients } from '../db/schema'
 import { BadRequestError, ForbiddenError } from '../utils/errors'
-import { CreateAppointmentSlotsDTO } from '../utils/validations'
 import { doctorService } from './doctorService'
-import { AppointmentSlot } from '../types/appointments'
+import { Slot } from '@m-oss/types'
 
 export const appointmentService = {
   async availableSlotsByDoctorId(doctorId: string, after: Date, before: Date) {
@@ -86,7 +85,7 @@ export const appointmentService = {
     }
   },
 
-  async createSlots(userId: string, data: CreateAppointmentSlotsDTO) {
+  async createSlots(userId: string, data: CreateSlotsDTO) {
     const doctor = await doctorService.assertIsDoctor(userId)
     const now = Date.now()
 
@@ -118,13 +117,10 @@ export const appointmentService = {
     return createdSlots
   },
 
-  async getMySlotsDoctor(userId: string, after: Date, before: Date): Promise<AppointmentSlot[]> {
+  async getMySlotsDoctor(userId: string, after: Date, before: Date): Promise<Slot[]> {
     const doctor = await doctorService.assertIsDoctor(userId)
 
-    const patientUser = alias(users, 'patientUser')
-    const patientAlias = alias(patients, 'patientAlias')
-
-    return (await db
+    const dbSlots = await db
       .select({
         appointmentId: appointments.id,
         doctorId: appointments.doctorId,
@@ -136,26 +132,26 @@ export const appointmentService = {
         patientNotes: appointments.patientNotes,
         doctorNotes: appointments.doctorNotes,
         videoCall: appointments.videoCall,
-        createdAt: appointments.createdAt,
-        updatedAt: appointments.updatedAt,
         status: sql`
-          CASE
-            WHEN ${appointments.bookedAt} IS NOT NULL THEN 'BOOKED'
-            WHEN ${appointments.reservedUntil} IS NOT NULL THEN 'RESERVED'
-            WHEN ${appointments.startTime} < NOW() AND ${appointments.bookedAt} IS NULL THEN 'EXPIRED'
-            ELSE 'AVAILABLE'
-          END
+        CASE
+        WHEN ${appointments.bookedAt} IS NOT NULL THEN 'BOOKED'
+        WHEN ${appointments.reservedUntil} IS NOT NULL THEN 'RESERVED'
+        WHEN ${appointments.startTime} < NOW() AND ${appointments.bookedAt} IS NULL THEN 'EXPIRED'
+        ELSE 'AVAILABLE'
+        END
         `.as('status'),
-
         patient: {
           id: patients.id,
           firstName: users.firstName,
           lastName: users.lastName,
           email: users.email,
           phoneNumber: users.phoneNumber,
+          address: users.address,
           dateOfBirth: users.dateOfBirth,
           gender: users.gender,
         },
+        createdAt: appointments.createdAt,
+        updatedAt: appointments.updatedAt,
       })
       .from(appointments)
       .leftJoin(patients, eq(appointments.patientId, patients.id))
@@ -166,7 +162,17 @@ export const appointmentService = {
           gte(appointments.startTime, after),
           lte(appointments.endTime, before)
         )
-      )) as AppointmentSlot[]
+      )
+
+    return dbSlots.map(slot => ({
+      ...slot,
+      startTime: slot.startTime.toISOString(),
+      endTime: slot.endTime.toISOString(),
+      bookedAt: slot.bookedAt?.toISOString() ?? null,
+      reservedUntil: slot.reservedUntil?.toISOString() ?? null,
+      createdAt: slot.createdAt,
+      updatedAt: slot.updatedAt,
+    })) as Slot[]
   },
 
   async deleteSlot(userId: string, slotId: string) {

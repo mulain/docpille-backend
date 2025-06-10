@@ -1,8 +1,8 @@
 import { Request, Response } from 'express'
+import { updateProfileSchema } from '@m-oss/types'
 
 // local imports
 import { userService } from '../services/userService'
-import { updateProfileSchema } from '../utils/validations'
 
 export const userController = {
   async getCurrentUser(req: Request, res: Response) {

@@ -1,9 +1,8 @@
 import { Request, Response } from 'express'
+import { loginSchema, forgotPasswordSchema, resetPasswordSchema } from '@m-oss/types'
 
 // local imports
 import { authService } from '../services/authService'
-import { loginSchema, forgotPasswordSchema, resetPasswordSchema } from '../utils/validations'
-import { UnauthorizedError } from '../utils/errors'
 
 export const authController = {
   async login(req: Request, res: Response) {

@@ -1,14 +1,13 @@
 import { Request, Response } from 'express'
-import { z } from 'zod'
+import { emailSchema, registerPatientSchema } from '@m-oss/types'
 
 // local imports
 import { registerService } from '../services/registerService'
 import { BadRequestError } from '../utils/errors'
-import { emailSchema, registerSchema } from '../utils/validations'
 
 export const registerController = {
-  async register(req: Request, res: Response) {
-    const data = registerSchema.parse(req.body)
+  async registerPatient(req: Request, res: Response) {
+    const data = registerPatientSchema.parse(req.body)
     const result = await registerService.registerPatient(data)
     res.status(201).json(result)
   },

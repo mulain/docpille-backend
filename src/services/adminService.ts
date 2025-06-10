@@ -1,5 +1,6 @@
 import { eq } from 'drizzle-orm'
 import crypto from 'crypto'
+import { CreateDoctorDTO, EditDoctorDTO } from '@m-oss/types'
 
 // local imports
 import { hashPassword, generateRandomToken } from '../utils/auth'
@@ -8,9 +9,6 @@ import { doctors, users } from '../db/schema'
 import { logger } from '../utils/logger'
 import { emailService } from './emailService'
 import { InsertDoctor, InsertUser } from '../types/user'
-
-// dto
-import { CreateDoctorDTO, EditDoctorDTO } from '../utils/validations'
 
 // errors
 import { EmailExistsError, NotFoundError } from '../utils/errors'

@@ -1,8 +1,8 @@
 import { Request, Response } from 'express'
+import { uuidSchema, createDoctorSchema, editDoctorSchema } from '@m-oss/types'
 
 // local imports
 import { adminService } from '../services/adminService'
-import { createDoctorSchema, uuidSchema, editDoctorSchema } from '../utils/validations'
 
 export const adminController = {
   async createDoctor(req: Request, res: Response) {

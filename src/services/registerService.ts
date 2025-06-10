@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm'
+import { RegisterPatientDTO } from '@m-oss/types'
 
 // local imports
 import { db } from '../db'
@@ -6,7 +7,6 @@ import { users, patients, userRoleEnum } from '../db/schema'
 import { hashPassword, generateRandomToken } from '../utils/auth'
 import { logger } from '../utils/logger'
 import { emailService } from '../services/emailService'
-import { RegisterDTO } from '../utils/validations'
 import {
   EmailExistsError,
   InvalidVerificationTokenError,
@@ -14,7 +14,7 @@ import {
 } from '../utils/errors'
 
 export const registerService = {
-  async registerPatient(data: RegisterDTO) {
+  async registerPatient(data: RegisterPatientDTO) {
     const existingUser = await db.query.users.findFirst({
       where: eq(users.email, data.email),
     })

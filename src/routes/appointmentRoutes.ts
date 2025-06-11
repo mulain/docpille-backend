@@ -21,13 +21,8 @@ router.get(
   asyncHandler(appointmentController.getAvailableSlotsByDoctorId)
 )
 
-// List a doctor's own appointments
-router.get(
-  '/doctor',
-  authenticate,
-  requireDoctor,
-  asyncHandler(appointmentController.getMySlotsDoctor)
-)
+// List a user's own appointments
+router.get('/me', authenticate, asyncHandler(appointmentController.getMySlots))
 
 // Get appointment by ID
 router.get(

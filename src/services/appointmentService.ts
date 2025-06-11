@@ -1,12 +1,12 @@
 import { and, eq, isNull, gte, lte, lt, gt, or, sql } from 'drizzle-orm'
-import { CreateSlotsDTO } from '@m-oss/types'
+import { CreateSlotsDTO, DoctorSlot, PatientSlot } from '@m-oss/types'
 
 // local imports
 import { db } from '../db'
 import { appointments, doctors, users, patients } from '../db/schema'
 import { BadRequestError, ForbiddenError } from '../utils/errors'
 import { doctorService } from './doctorService'
-import { Slot } from '@m-oss/types'
+import { patientService } from './patientService'
 
 export const appointmentService = {
   async availableSlotsByDoctorId(doctorId: string, after: Date, before: Date) {
@@ -117,29 +117,50 @@ export const appointmentService = {
     return createdSlots
   },
 
-  async getMySlotsDoctor(userId: string, after: Date, before: Date): Promise<Slot[]> {
+  baseSlotFields() {
+    return {
+      appointmentId: appointments.id,
+      startTime: appointments.startTime,
+      endTime: appointments.endTime,
+      bookedAt: appointments.bookedAt,
+      reservedUntil: appointments.reservedUntil,
+      reason: appointments.reason,
+      patientNotes: appointments.patientNotes,
+      videoCall: appointments.videoCall,
+      status: sql`
+        CASE
+          WHEN ${appointments.endTime} < NOW() AND ${appointments.bookedAt} IS NOT NULL THEN 'COMPLETED'
+          WHEN ${appointments.bookedAt} IS NOT NULL THEN 'BOOKED'
+          WHEN ${appointments.reservedUntil} IS NOT NULL THEN 'RESERVED'
+          WHEN ${appointments.startTime} < NOW() AND ${appointments.bookedAt} IS NULL THEN 'EXPIRED'
+          ELSE 'AVAILABLE'
+        END
+      `.as('status'),
+    }
+  },
+
+  formatSlotTimes(slot: {
+    startTime: Date
+    endTime: Date
+    bookedAt?: Date | null
+    reservedUntil?: Date | null
+  }) {
+    return {
+      ...slot,
+      startTime: slot.startTime.toISOString(),
+      endTime: slot.endTime.toISOString(),
+      bookedAt: slot.bookedAt?.toISOString() ?? null,
+      reservedUntil: slot.reservedUntil?.toISOString() ?? null,
+    }
+  },
+
+  async getMySlotsDoctor(userId: string, after: Date, before: Date): Promise<DoctorSlot[]> {
     const doctor = await doctorService.assertIsDoctor(userId)
 
     const dbSlots = await db
       .select({
-        appointmentId: appointments.id,
-        doctorId: appointments.doctorId,
-        startTime: appointments.startTime,
-        endTime: appointments.endTime,
-        bookedAt: appointments.bookedAt,
-        reservedUntil: appointments.reservedUntil,
-        reason: appointments.reason,
-        patientNotes: appointments.patientNotes,
+        ...this.baseSlotFields(),
         doctorNotes: appointments.doctorNotes,
-        videoCall: appointments.videoCall,
-        status: sql`
-        CASE
-        WHEN ${appointments.bookedAt} IS NOT NULL THEN 'BOOKED'
-        WHEN ${appointments.reservedUntil} IS NOT NULL THEN 'RESERVED'
-        WHEN ${appointments.startTime} < NOW() AND ${appointments.bookedAt} IS NULL THEN 'EXPIRED'
-        ELSE 'AVAILABLE'
-        END
-        `.as('status'),
         patient: {
           id: patients.id,
           firstName: users.firstName,
@@ -150,8 +171,6 @@ export const appointmentService = {
           dateOfBirth: users.dateOfBirth,
           gender: users.gender,
         },
-        createdAt: appointments.createdAt,
-        updatedAt: appointments.updatedAt,
       })
       .from(appointments)
       .leftJoin(patients, eq(appointments.patientId, patients.id))
@@ -164,15 +183,34 @@ export const appointmentService = {
         )
       )
 
-    return dbSlots.map(slot => ({
-      ...slot,
-      startTime: slot.startTime.toISOString(),
-      endTime: slot.endTime.toISOString(),
-      bookedAt: slot.bookedAt?.toISOString() ?? null,
-      reservedUntil: slot.reservedUntil?.toISOString() ?? null,
-      createdAt: slot.createdAt,
-      updatedAt: slot.updatedAt,
-    })) as Slot[]
+    return dbSlots.map(slot => this.formatSlotTimes(slot)) as DoctorSlot[]
+  },
+
+  async getMySlotsPatient(userId: string, after: Date, before: Date): Promise<PatientSlot[]> {
+    const patient = await patientService.assertIsPatient(userId)
+
+    const dbSlots = await db
+      .select({
+        ...this.baseSlotFields(),
+        doctor: {
+          id: doctors.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          specialization: doctors.specialization,
+        },
+      })
+      .from(appointments)
+      .leftJoin(doctors, eq(appointments.doctorId, doctors.id))
+      .leftJoin(users, eq(doctors.userId, users.id))
+      .where(
+        and(
+          eq(appointments.patientId, patient.id),
+          gte(appointments.startTime, after),
+          lte(appointments.endTime, before)
+        )
+      )
+
+    return dbSlots.map(slot => this.formatSlotTimes(slot)) as PatientSlot[]
   },
 
   async deleteSlot(userId: string, slotId: string) {

@@ -27,7 +27,6 @@ export const errorHandler: ErrorRequestHandler = (
     })
   }
 
-  // Handle Zod validation errors
   if (err instanceof z.ZodError) {
     res.status(400).json({
       success: false,

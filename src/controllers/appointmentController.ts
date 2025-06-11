@@ -11,10 +11,15 @@ export const appointmentController = {
     res.json({ slots })
   },
 
-  async getMySlotsDoctor(req: Request, res: Response) {
+  async getMySlots(req: Request, res: Response) {
     const { after, before } = timeRangeSchema.parse(req.query)
-    const slots = await appointmentService.getMySlotsDoctor(req.user!.id, after, before)
-    res.json({ slots })
+    if (req.user?.role === 'DOCTOR') {
+      const slots = await appointmentService.getMySlotsDoctor(req.user!.id, after, before)
+      res.json({ slots })
+    } else {
+      const slots = await appointmentService.getMySlotsPatient(req.user!.id, after, before)
+      res.json({ slots })
+    }
   },
 
   async createSlots(req: Request, res: Response) {

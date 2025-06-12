@@ -39,6 +39,12 @@ router.post('/', authenticate, requireDoctor, asyncHandler(appointmentController
 // Update an appointment by ID
 router.put('/:id', authenticate, asyncHandler(appointmentController.updateSlot))
 
+// Book an appointment by ID
+router.post('/:id/book', authenticate, asyncHandler(appointmentController.bookSlot))
+
+// Cancel an appointment by ID
+router.post('/:id/cancel', authenticate, asyncHandler(appointmentController.cancelSlot))
+
 // Delete an appointment by ID
 router.delete('/:id', authenticate, requireDoctor, asyncHandler(appointmentController.deleteSlot))
 

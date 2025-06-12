@@ -37,6 +37,18 @@ export const appointmentController = {
     res.status(201).json({ slots })
   },
 
+  async bookSlot(req: Request, res: Response) {
+    const id = uuidSchema.parse(req.params.id)
+    await appointmentService.bookSlot(req.user!.id, id)
+    res.status(204).send()
+  },
+
+  async cancelSlot(req: Request, res: Response) {
+    const id = uuidSchema.parse(req.params.id)
+    await appointmentService.cancelSlot(req.user!.id, id)
+    res.status(204).send()
+  },
+
   async deleteSlot(req: Request, res: Response) {
     const id = uuidSchema.parse(req.params)
     await appointmentService.deleteSlot(req.user!.id, id)

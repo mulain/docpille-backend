@@ -220,6 +220,46 @@ export const appointmentService = {
     return dbSlots.map(slot => normalizeSlotTimestamps(slot)) as PatientSlot[]
   },
 
+  async bookSlot(userId: string, slotId: string) {
+    const patient = await patientService.assertIsPatient(userId)
+
+    const slot = await db.query.appointments.findFirst({
+      where: and(eq(appointments.id, slotId), isNull(appointments.patientId)),
+    })
+
+    if (!slot) {
+      throw new NotFoundError('Slot not found')
+    }
+
+    const [updatedSlot] = await db
+      .update(appointments)
+      .set({ patientId: patient.id, bookedAt: new Date() })
+      .where(eq(appointments.id, slotId))
+      .returning()
+
+    return normalizeSlotTimestamps(updatedSlot)
+  },
+
+  async cancelSlot(userId: string, slotId: string) {
+    const patient = await patientService.assertIsPatient(userId)
+
+    const slot = await db.query.appointments.findFirst({
+      where: and(eq(appointments.id, slotId), eq(appointments.patientId, patient.id)),
+    })
+
+    if (!slot) {
+      throw new NotFoundError('Slot not found')
+    }
+
+    const [updatedSlot] = await db
+      .update(appointments)
+      .set({ patientId: null, bookedAt: null })
+      .where(eq(appointments.id, slotId))
+      .returning()
+
+    return normalizeSlotTimestamps(updatedSlot)
+  },
+
   async deleteSlot(userId: string, slotId: string) {
     const doctor = await doctorService.assertIsDoctor(userId)
 

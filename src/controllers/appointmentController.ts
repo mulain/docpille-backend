@@ -44,7 +44,7 @@ export const appointmentController = {
   },
 
   async updateSlot(req: Request, res: Response) {
-    const id = uuidSchema.parse(req.params)
+    const id = uuidSchema.parse(req.params.id)
 
     switch (req.user?.role) {
       case 'DOCTOR': {

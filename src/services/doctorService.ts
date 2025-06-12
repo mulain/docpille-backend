@@ -6,6 +6,18 @@ import { doctors, users } from '../db/schema'
 import { ForbiddenError } from '../utils/errors'
 
 export const doctorService = {
+  async assertIsDoctor(userId: string) {
+    const doctor = await db.query.doctors.findFirst({
+      where: eq(doctors.userId, userId),
+    })
+
+    if (!doctor) {
+      throw new ForbiddenError('User is not a doctor')
+    }
+
+    return doctor
+  },
+  
   async getAllDoctors() {
     const result = await db
       .select({
@@ -39,17 +51,5 @@ export const doctorService = {
       .orderBy(users.lastName, users.firstName)
 
     return result
-  },
-
-  async assertIsDoctor(userId: string) {
-    const doctor = await db.query.doctors.findFirst({
-      where: eq(doctors.userId, userId),
-    })
-
-    if (!doctor) {
-      throw new ForbiddenError('User is not a doctor')
-    }
-
-    return doctor
   },
 }

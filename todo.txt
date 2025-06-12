@@ -1,6 +1,4 @@
 - password security (currently just min 6) + frontend obviously
-- review types folder, currently unorganized
-- patient endpoints are a mess
 - logging patient password in requestlogger because it logs the body?
 - rate limiter should apply to more (all?) routes, also reinstate correct n
 - Check for overexposure of expected errors (asyncHandler)
@@ -11,5 +9,10 @@
 - check migrate.ts file (currently unused)
 - implement logger
 - what about min slot duration, min slot separation, max slots per day, earliest / latest slot enforcement?
+   - if so, implement storing a users time zone
+   - then reinstating no slots over date change is possible - but prolly unnecessary
+     because earliest/latest enforcement is better and covers it
 
 - clean up error handler
+
+- make authorizedRequest

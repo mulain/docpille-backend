@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "NODE_ENV=dev nodemon --watch src --exec ts-node src/index.ts",
     "test": "NODE_ENV=test exit 0",
+    "build": "tsc",
     "format": "prettier --write \"src/**/*.{ts,js,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,js,json}\"",
     "db:generate": "drizzle-kit generate",

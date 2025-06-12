@@ -1,4 +1,4 @@
-import { pgTable, uuid, text, timestamp, boolean, pgEnum, jsonb } from 'drizzle-orm/pg-core'
+import { pgTable, uuid, text, timestamp, boolean, pgEnum, jsonb, date } from 'drizzle-orm/pg-core'
 
 export const userRoleEnum = pgEnum('user_role', ['PATIENT', 'DOCTOR', 'ADMIN'])
 
@@ -10,7 +10,7 @@ export const users = pgTable('users', {
   lastName: text('last_name').notNull(),
   phoneNumber: text('phone_number'),
   address: text('address'),
-  dateOfBirth: text('date_of_birth'),
+  dateOfBirth: date('date_of_birth'),
   gender: text('gender'),
   role: userRoleEnum('role').notNull().default('PATIENT'),
   isEmailVerified: boolean('is_email_verified').notNull().default(false),

@@ -32,41 +32,30 @@ async function validateSlots(
       throw new BadRequestError('End time must be after start time')
     }
 
-    const startDay = Date.UTC(
-      startTime.getUTCFullYear(),
-      startTime.getUTCMonth(),
-      startTime.getUTCDate()
+    // Order slots to allow efficient loop and check for overlaps within the new slots
+    const sortedSlots = [...slots].sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
+    for (let i = 1; i < sortedSlots.length; i++) {
+      if (sortedSlots[i].startTime < sortedSlots[i - 1].endTime) {
+        throw new BadRequestError('Appointment slots must not overlap')
+      }
+    }
+
+    // Check for overlaps with existing slots
+    const overlapConditions = slots.map(slot =>
+      and(lt(appointments.startTime, slot.endTime), gt(appointments.endTime, slot.startTime))
     )
-    const endDay = Date.UTC(endTime.getUTCFullYear(), endTime.getUTCMonth(), endTime.getUTCDate())
 
-    if (startDay !== endDay) {
-      throw new BadRequestError('Appointment slots must be within the same day')
+    const existingOverlap = await db.query.appointments.findFirst({
+      where: and(eq(appointments.doctorId, doctorId), or(...overlapConditions)),
+    })
+
+    if (existingOverlap) {
+      throw new BadRequestError('One or more new slots overlap with existing slots')
     }
-  }
-
-  // Order slots for efficiency and check for overlaps within the new slots
-  const sortedSlots = [...slots].sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
-  for (let i = 1; i < sortedSlots.length; i++) {
-    if (sortedSlots[i].startTime < sortedSlots[i - 1].endTime) {
-      throw new BadRequestError('Appointment slots must not overlap')
-    }
-  }
-
-  // Check for overlaps with existing slots
-  const overlapConditions = slots.map(slot =>
-    and(lt(appointments.startTime, slot.endTime), gt(appointments.endTime, slot.startTime))
-  )
-
-  const existingOverlap = await db.query.appointments.findFirst({
-    where: and(eq(appointments.doctorId, doctorId), or(...overlapConditions)),
-  })
-
-  if (existingOverlap) {
-    throw new BadRequestError('One or more new slots overlap with existing slots')
   }
 }
 
-function formatSlotTimes(slot: {
+function normalizeSlotTimestamps(slot: {
   startTime: Date
   endTime: Date
   bookedAt?: Date | null
@@ -180,6 +169,11 @@ export const appointmentService = {
           address: users.address,
           dateOfBirth: users.dateOfBirth,
           gender: users.gender,
+          age: sql<number | null>`
+            CASE WHEN ${users.dateOfBirth} IS NOT NULL
+              THEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, ${users.dateOfBirth}::timestamp))::int
+            ELSE NULL END
+        `.as('age'),
         },
       })
       .from(appointments)
@@ -193,7 +187,10 @@ export const appointmentService = {
         )
       )
 
-    return dbSlots.map(slot => formatSlotTimes(slot)) as DoctorSlot[]
+    return dbSlots.map(({ patient, ...slot }) => ({
+      ...normalizeSlotTimestamps(slot),
+      patient: patient?.id ? patient : null,
+    })) as DoctorSlot[]
   },
 
   async getMySlotsPatient(userId: string, after: Date, before: Date): Promise<PatientSlot[]> {
@@ -220,7 +217,7 @@ export const appointmentService = {
         )
       )
 
-    return dbSlots.map(slot => formatSlotTimes(slot)) as PatientSlot[]
+    return dbSlots.map(slot => normalizeSlotTimestamps(slot)) as PatientSlot[]
   },
 
   async deleteSlot(userId: string, slotId: string) {
@@ -270,7 +267,7 @@ export const appointmentService = {
       .where(eq(appointments.id, slotId))
       .returning()
 
-    return formatSlotTimes(updatedSlot)
+    return normalizeSlotTimestamps(updatedSlot)
   },
 
   async updateSlotPatient(userId: string, slotId: string, rawData: EditSlotPatientDTO) {
@@ -292,7 +289,7 @@ export const appointmentService = {
       .where(eq(appointments.id, slotId))
       .returning()
 
-    return formatSlotTimes(updatedSlot)
+    return normalizeSlotTimestamps(updatedSlot)
   },
 
   async updateSlotAdmin(userId: string, slotId: string, rawData: EditSlotAdminDTO) {
@@ -314,6 +311,6 @@ export const appointmentService = {
       .where(eq(appointments.id, slotId))
       .returning()
 
-    return formatSlotTimes(updatedSlot)
+    return normalizeSlotTimestamps(updatedSlot)
   },
 }

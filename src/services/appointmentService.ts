@@ -1,12 +1,107 @@
 import { and, eq, isNull, gte, lte, lt, gt, or, sql } from 'drizzle-orm'
-import { CreateSlotsDTO, DoctorSlot, PatientSlot } from '@m-oss/types'
+import {
+  CreateSlotsDTO,
+  DoctorSlot,
+  PatientSlot,
+  EditSlotDoctorDTO,
+  EditSlotPatientDTO,
+  EditSlotAdminDTO,
+} from '@m-oss/types'
 
 // local imports
 import { db } from '../db'
 import { appointments, doctors, users, patients } from '../db/schema'
-import { BadRequestError, ForbiddenError } from '../utils/errors'
+import { BadRequestError, ForbiddenError, NotFoundError } from '../utils/errors'
 import { doctorService } from './doctorService'
 import { patientService } from './patientService'
+import { stripUndefined } from '../utils/helpers'
+import { adminService } from './adminService'
+
+// Helper functions
+async function validateSlots(
+  doctorId: string,
+  slots: { startTime: Date; endTime: Date }[],
+  now: number = Date.now()
+) {
+  // Validate individual slots
+  for (const { startTime, endTime } of slots) {
+    if (startTime.getTime() < now) {
+      throw new BadRequestError('Slot start time must be in the future')
+    }
+    if (endTime.getTime() <= startTime.getTime()) {
+      throw new BadRequestError('End time must be after start time')
+    }
+
+    const startDay = Date.UTC(
+      startTime.getUTCFullYear(),
+      startTime.getUTCMonth(),
+      startTime.getUTCDate()
+    )
+    const endDay = Date.UTC(endTime.getUTCFullYear(), endTime.getUTCMonth(), endTime.getUTCDate())
+
+    if (startDay !== endDay) {
+      throw new BadRequestError('Appointment slots must be within the same day')
+    }
+  }
+
+  // Order slots for efficiency and check for overlaps within the new slots
+  const sortedSlots = [...slots].sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
+  for (let i = 1; i < sortedSlots.length; i++) {
+    if (sortedSlots[i].startTime < sortedSlots[i - 1].endTime) {
+      throw new BadRequestError('Appointment slots must not overlap')
+    }
+  }
+
+  // Check for overlaps with existing slots
+  const overlapConditions = slots.map(slot =>
+    and(lt(appointments.startTime, slot.endTime), gt(appointments.endTime, slot.startTime))
+  )
+
+  const existingOverlap = await db.query.appointments.findFirst({
+    where: and(eq(appointments.doctorId, doctorId), or(...overlapConditions)),
+  })
+
+  if (existingOverlap) {
+    throw new BadRequestError('One or more new slots overlap with existing slots')
+  }
+}
+
+function formatSlotTimes(slot: {
+  startTime: Date
+  endTime: Date
+  bookedAt?: Date | null
+  reservedUntil?: Date | null
+}) {
+  return {
+    ...slot,
+    startTime: slot.startTime.toISOString(),
+    endTime: slot.endTime.toISOString(),
+    bookedAt: slot.bookedAt?.toISOString() ?? null,
+    reservedUntil: slot.reservedUntil?.toISOString() ?? null,
+  }
+}
+
+function baseSlotFields() {
+  return {
+    appointmentId: appointments.id,
+    startTime: appointments.startTime,
+    endTime: appointments.endTime,
+    bookedAt: appointments.bookedAt,
+    reservedUntil: appointments.reservedUntil,
+    reason: appointments.reason,
+    patientNotes: appointments.patientNotes,
+    videoCall: appointments.videoCall,
+    status: sql`
+      CASE
+        WHEN ${appointments.endTime} < NOW() AND ${appointments.bookedAt} IS NOT NULL THEN 'COMPLETED'
+        WHEN ${appointments.bookedAt} IS NOT NULL THEN 'BOOKED'
+        WHEN ${appointments.reservedUntil} IS NOT NULL THEN 'RESERVED'
+        WHEN ${appointments.startTime} < NOW() AND ${appointments.bookedAt} IS NULL THEN 'EXPIRED'
+        ELSE 'AVAILABLE'
+      END
+    `.as('status'),
+  }
+}
 
 export const appointmentService = {
   async availableSlotsByDoctorId(doctorId: string, after: Date, before: Date) {
@@ -38,53 +133,6 @@ export const appointmentService = {
     })
   },
 
-  validateSlots(slots: { startTime: Date; endTime: Date }[], now: number) {
-    for (const { startTime, endTime } of slots) {
-      if (startTime.getTime() < now) {
-        throw new BadRequestError('Slot start time must be in the future')
-      }
-      if (endTime.getTime() <= startTime.getTime()) {
-        throw new BadRequestError('End time must be after start time')
-      }
-
-      const startDay = Date.UTC(
-        startTime.getUTCFullYear(),
-        startTime.getUTCMonth(),
-        startTime.getUTCDate()
-      )
-      const endDay = Date.UTC(endTime.getUTCFullYear(), endTime.getUTCMonth(), endTime.getUTCDate())
-
-      if (startDay !== endDay) {
-        throw new BadRequestError('Appointment slots must be within the same day')
-      }
-    }
-
-    const sortedSlots = [...slots].sort((a, b) => a.startTime.getTime() - b.startTime.getTime())
-
-    for (let i = 1; i < sortedSlots.length; i++) {
-      if (sortedSlots[i].startTime < sortedSlots[i - 1].endTime) {
-        throw new BadRequestError('Appointment slots must not overlap')
-      }
-    }
-  },
-
-  async checkOverlapWithExisting(
-    doctorId: string,
-    newSlots: { startTime: Date; endTime: Date }[]
-  ): Promise<void> {
-    const overlapConditions = newSlots.map(slot =>
-      and(lt(appointments.startTime, slot.endTime), gt(appointments.endTime, slot.startTime))
-    )
-
-    const existingOverlap = await db.query.appointments.findFirst({
-      where: and(eq(appointments.doctorId, doctorId), or(...overlapConditions)),
-    })
-
-    if (existingOverlap) {
-      throw new BadRequestError('One or more new slots overlap with existing slots')
-    }
-  },
-
   async createSlots(userId: string, data: CreateSlotsDTO) {
     const doctor = await doctorService.assertIsDoctor(userId)
     const now = Date.now()
@@ -100,8 +148,7 @@ export const appointmentService = {
       return { startTime, endTime }
     })
 
-    this.validateSlots(slots, now)
-    await this.checkOverlapWithExisting(doctor.id, slots)
+    await validateSlots(doctor.id, slots, now)
 
     const slotsToInsert = slots.map(slot => ({
       doctorId: doctor.id,
@@ -117,49 +164,12 @@ export const appointmentService = {
     return createdSlots
   },
 
-  baseSlotFields() {
-    return {
-      appointmentId: appointments.id,
-      startTime: appointments.startTime,
-      endTime: appointments.endTime,
-      bookedAt: appointments.bookedAt,
-      reservedUntil: appointments.reservedUntil,
-      reason: appointments.reason,
-      patientNotes: appointments.patientNotes,
-      videoCall: appointments.videoCall,
-      status: sql`
-        CASE
-          WHEN ${appointments.endTime} < NOW() AND ${appointments.bookedAt} IS NOT NULL THEN 'COMPLETED'
-          WHEN ${appointments.bookedAt} IS NOT NULL THEN 'BOOKED'
-          WHEN ${appointments.reservedUntil} IS NOT NULL THEN 'RESERVED'
-          WHEN ${appointments.startTime} < NOW() AND ${appointments.bookedAt} IS NULL THEN 'EXPIRED'
-          ELSE 'AVAILABLE'
-        END
-      `.as('status'),
-    }
-  },
-
-  formatSlotTimes(slot: {
-    startTime: Date
-    endTime: Date
-    bookedAt?: Date | null
-    reservedUntil?: Date | null
-  }) {
-    return {
-      ...slot,
-      startTime: slot.startTime.toISOString(),
-      endTime: slot.endTime.toISOString(),
-      bookedAt: slot.bookedAt?.toISOString() ?? null,
-      reservedUntil: slot.reservedUntil?.toISOString() ?? null,
-    }
-  },
-
   async getMySlotsDoctor(userId: string, after: Date, before: Date): Promise<DoctorSlot[]> {
     const doctor = await doctorService.assertIsDoctor(userId)
 
     const dbSlots = await db
       .select({
-        ...this.baseSlotFields(),
+        ...baseSlotFields(),
         doctorNotes: appointments.doctorNotes,
         patient: {
           id: patients.id,
@@ -183,7 +193,7 @@ export const appointmentService = {
         )
       )
 
-    return dbSlots.map(slot => this.formatSlotTimes(slot)) as DoctorSlot[]
+    return dbSlots.map(slot => formatSlotTimes(slot)) as DoctorSlot[]
   },
 
   async getMySlotsPatient(userId: string, after: Date, before: Date): Promise<PatientSlot[]> {
@@ -191,7 +201,7 @@ export const appointmentService = {
 
     const dbSlots = await db
       .select({
-        ...this.baseSlotFields(),
+        ...baseSlotFields(),
         doctor: {
           id: doctors.id,
           firstName: users.firstName,
@@ -210,7 +220,7 @@ export const appointmentService = {
         )
       )
 
-    return dbSlots.map(slot => this.formatSlotTimes(slot)) as PatientSlot[]
+    return dbSlots.map(slot => formatSlotTimes(slot)) as PatientSlot[]
   },
 
   async deleteSlot(userId: string, slotId: string) {
@@ -229,5 +239,81 @@ export const appointmentService = {
     }
 
     await db.delete(appointments).where(eq(appointments.id, slotId))
+  },
+
+  async updateSlotDoctor(userId: string, slotId: string, rawData: EditSlotDoctorDTO) {
+    const doctor = await doctorService.assertIsDoctor(userId)
+
+    const data = stripUndefined(rawData)
+
+    const slot = await db.query.appointments.findFirst({
+      where: and(eq(appointments.id, slotId), eq(appointments.doctorId, doctor.id)),
+    })
+
+    if (!slot) {
+      throw new ForbiddenError('This appointment either does not exist or does not belong to you')
+    }
+
+    if ('startTime' in data || 'endTime' in data) {
+      if (slot.patientId) {
+        throw new BadRequestError('Cannot update times of a slot that is booked or reserved')
+      }
+      const newStartTime = data.startTime || slot.startTime
+      const newEndTime = data.endTime || slot.endTime
+
+      await validateSlots(doctor.id, [{ startTime: newStartTime, endTime: newEndTime }])
+    }
+
+    const [updatedSlot] = await db
+      .update(appointments)
+      .set(data)
+      .where(eq(appointments.id, slotId))
+      .returning()
+
+    return formatSlotTimes(updatedSlot)
+  },
+
+  async updateSlotPatient(userId: string, slotId: string, rawData: EditSlotPatientDTO) {
+    const patient = await patientService.assertIsPatient(userId)
+
+    const data = stripUndefined(rawData)
+
+    const slot = await db.query.appointments.findFirst({
+      where: and(eq(appointments.id, slotId), eq(appointments.patientId, patient.id)),
+    })
+
+    if (!slot) {
+      throw new ForbiddenError('This appointment either does not exist or does not belong to you')
+    }
+
+    const [updatedSlot] = await db
+      .update(appointments)
+      .set(data)
+      .where(eq(appointments.id, slotId))
+      .returning()
+
+    return formatSlotTimes(updatedSlot)
+  },
+
+  async updateSlotAdmin(userId: string, slotId: string, rawData: EditSlotAdminDTO) {
+    await adminService.assertIsAdmin(userId)
+
+    const data = stripUndefined(rawData)
+
+    const slot = await db.query.appointments.findFirst({
+      where: eq(appointments.id, slotId),
+    })
+
+    if (!slot) {
+      throw new NotFoundError('Appointment not found')
+    }
+
+    const [updatedSlot] = await db
+      .update(appointments)
+      .set(data)
+      .where(eq(appointments.id, slotId))
+      .returning()
+
+    return formatSlotTimes(updatedSlot)
   },
 }

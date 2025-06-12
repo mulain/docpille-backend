@@ -11,9 +11,23 @@ import { emailService } from './emailService'
 import { InsertDoctor, InsertUser } from '../types/user'
 
 // errors
-import { EmailExistsError, NotFoundError } from '../utils/errors'
+import { EmailExistsError, ForbiddenError, NotFoundError } from '../utils/errors'
 
 export const adminService = {
+  async assertIsAdmin(userId: string) {
+    const user = await db.query.users.findFirst({ where: eq(users.id, userId) })
+
+    if (!user) {
+      throw new NotFoundError('User not found')
+    }
+
+    if (user.role !== 'ADMIN') {
+      throw new ForbiddenError('User is not an admin')
+    }
+    
+    return user
+  },
+
   async createDoctor(data: CreateDoctorDTO) {
     const existingUser = await db.query.users.findFirst({
       where: eq(users.email, data.email),

@@ -33,17 +33,13 @@ router.get(
   })
 )
 
+// Create one or more appointments
 router.post('/', authenticate, requireDoctor, asyncHandler(appointmentController.createSlots))
 
 // Update an appointment by ID
-router.put(
-  '/:id',
-  asyncHandler(async (req, res) => {
-    // TODO: Implement update appointment
-    res.status(501).json({ message: 'Update appointment not implemented' })
-  })
-)
+router.put('/:id', authenticate, asyncHandler(appointmentController.updateSlot))
 
+// Delete an appointment by ID
 router.delete('/:id', authenticate, requireDoctor, asyncHandler(appointmentController.deleteSlot))
 
 export default router

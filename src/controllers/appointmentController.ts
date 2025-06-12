@@ -1,8 +1,17 @@
 import { Request, Response } from 'express'
-import { timeRangeSchema, doctorTimeRangeSchema, createSlotsSchema } from '@m-oss/types'
+import {
+  timeRangeSchema,
+  doctorTimeRangeSchema,
+  createSlotsSchema,
+  uuidSchema,
+  editSlotDoctorSchema,
+  editSlotPatientSchema,
+  editSlotAdminSchema,
+} from '@m-oss/types'
 
 // local imports
 import { appointmentService } from '../services/appointmentService'
+import { ForbiddenError } from '../utils/errors'
 
 export const appointmentController = {
   async getAvailableSlotsByDoctorId(req: Request, res: Response) {
@@ -29,8 +38,32 @@ export const appointmentController = {
   },
 
   async deleteSlot(req: Request, res: Response) {
-    const { id } = req.params
+    const id = uuidSchema.parse(req.params)
     await appointmentService.deleteSlot(req.user!.id, id)
     res.status(204).send()
+  },
+
+  async updateSlot(req: Request, res: Response) {
+    const id = uuidSchema.parse(req.params)
+
+    switch (req.user?.role) {
+      case 'DOCTOR': {
+        const data = editSlotDoctorSchema.parse(req.body)
+        const updatedSlot = await appointmentService.updateSlotDoctor(req.user.id, id, data)
+        return res.json({ slot: updatedSlot })
+      }
+      case 'PATIENT': {
+        const data = editSlotPatientSchema.parse(req.body)
+        const updatedSlot = await appointmentService.updateSlotPatient(req.user.id, id, data)
+        return res.json({ slot: updatedSlot })
+      }
+      case 'ADMIN': {
+        const data = editSlotAdminSchema.parse(req.body)
+        const updatedSlot = await appointmentService.updateSlotAdmin(req.user.id, id, data)
+        return res.json({ slot: updatedSlot })
+      }
+      default:
+        throw new ForbiddenError('You are not authorized to update this slot')
+    }
   },
 }

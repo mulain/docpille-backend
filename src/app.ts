@@ -19,6 +19,8 @@ import userRoutes from './routes/userRoutes'
 
 const app = express()
 
+app.set('trust proxy', true)
+
 // Middleware
 app.use(
   cors({

@@ -20,7 +20,12 @@ export const authController = {
   },
 
   async logout(req: Request, res: Response) {
-    res.clearCookie('token')
+    res.clearCookie('token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+      path: '/',
+    })
     res.json({ message: 'Logged out' })
   },
 
@@ -38,7 +43,7 @@ export const authController = {
     res.json({ message: 'Password has been reset successfully' })
   },
 
-/*   async refreshToken(req: Request, res: Response) {
+  /*   async refreshToken(req: Request, res: Response) {
     const { token } = req.body
     const { user, token: newToken } = await authService.refreshToken(token)
     res.json({ user, token: newToken })

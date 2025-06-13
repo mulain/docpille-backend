@@ -7,9 +7,7 @@ import config from '../config/config'
 
 const pool = new Pool({
   connectionString: config.databaseUrl,
-  ssl: {
-    rejectUnauthorized: false,
-  },
+  ssl: true,
 })
 
 export const db = drizzle(pool, { schema })

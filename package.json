@@ -4,9 +4,10 @@
   "description": "Appointment app backend for doctor's office",
   "main": "src/index.ts",
   "scripts": {
-    "dev": "NODE_ENV=dev nodemon --watch src --exec ts-node src/index.ts",
+    "dev": "nodemon --watch src --exec ts-node src/index.ts",
     "test": "NODE_ENV=test exit 0",
     "build": "tsc",
+    "start": "node dist/index.js",
     "format": "prettier --write \"src/**/*.{ts,js,json}\"",
     "format:check": "prettier --check \"src/**/*.{ts,js,json}\"",
     "db:generate": "drizzle-kit generate",

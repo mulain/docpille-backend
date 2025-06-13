@@ -6,7 +6,7 @@ import * as schema from './schema'
 import config from '../config/config'
 
 const pool = new Pool({
-  connectionString: config.database.uri,
+  connectionString: config.databaseUrl,
 })
 
 export const db = drizzle(pool, { schema })

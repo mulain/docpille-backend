@@ -38,7 +38,7 @@ app.use('/api/v1/doctors', doctorRoutes)
 app.use('/api/v1/admin', adminRoutes)
 app.use('/api/v1/users', userRoutes)
 
-// Health check endpoint
+// Health check
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok' })
 })
@@ -49,15 +49,14 @@ app.use(errorHandler)
 export async function initialize() {
   console.log(`Frontend URL: ${config.frontendUrl}`)
   console.log(`Environment: ${config.nodeEnv}`)
-  console.log(`Database: ${config.database.name}`)
 
   try {
     // Test database connection
     await db.execute(sql`SELECT 1`)
-    console.log(`✅ Database connected: ${config.database.name}`)
+    console.log(`✅ Database connected`)
     return app
   } catch (error) {
-    console.error(`❌ Error connecting to: ${config.database.name}`)
+    console.error(`❌ Error connecting to database`)
     console.error(error)
     throw error
   }

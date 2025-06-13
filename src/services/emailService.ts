@@ -14,7 +14,7 @@ interface EmailData {
 }
 
 const transporter =
-  config.nodeEnv === 'dev'
+  config.nodeEnv === 'development'
     ? nodemailer.createTransport({
         host: 'smtp.ethereal.email',
         port: 587,
@@ -46,7 +46,7 @@ async function sendEmail({ to, subject, template, data }: EmailData): Promise<vo
     })
 
     logger.info('Email sent successfully', { to, template })
-    if (config.nodeEnv === 'dev') {
+    if (config.nodeEnv === 'development') {
       logger.info(`Ethereal email preview URL: ${nodemailer.getTestMessageUrl(info)}`)
     }
   } catch (error) {

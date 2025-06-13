@@ -7,7 +7,7 @@ import config from '../config/config'
 
 const runMigration = async () => {
   const pool = new Pool({
-    connectionString: config.database.uri,
+    connectionString: config.databaseUrl,
   })
 
   const db = drizzle(pool)

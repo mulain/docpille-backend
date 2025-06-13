@@ -1,7 +1,6 @@
 import type { Config } from 'drizzle-kit'
 import config from './src/config/config'
 
-// Parse the database URI to get connection details
 const dbUrl = new URL(config.databaseUrl)
 const dbName = dbUrl.pathname.slice(1)
 
@@ -11,12 +10,12 @@ export default {
   dialect: 'postgresql',
   dbCredentials: {
     host: dbUrl.hostname,
-    port: Number(dbUrl.port),
+    port: Number(dbUrl.port) || 5432,
     user: dbUrl.username,
     password: dbUrl.password,
     database: dbName,
     ssl: {
-      rejectUnauthorized: false, // This will allow self-signed certificates
+      rejectUnauthorized: false,
     },
   },
 } satisfies Config

@@ -6,7 +6,6 @@ import * as schema from './schema'
 import config from '../config/config'
 
 console.log('DB URL:', config.databaseUrl)
-console.log('Using ssl.rejectUnauthorized = false')
 
 const pool = new Pool({
   connectionString: config.databaseUrl,
@@ -14,5 +13,8 @@ const pool = new Pool({
     rejectUnauthorized: false,
   },
 })
+
+console.log('Pool ssl config:', pool.options.ssl)
+console.log('Pool connectionString:', pool.options.connectionString)
 
 export const db = drizzle(pool, { schema })

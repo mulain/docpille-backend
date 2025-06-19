@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import crypto from 'crypto'
-import { CreateDoctorDTO, EditDoctorDTO } from '@m-oss/types'
+import { CreateDoctorDTO, UpdateProfileDoctorDTO } from '@m-oss/types'
 
 // local imports
 import { hashPassword, generateRandomToken } from '../utils/auth'
@@ -104,7 +104,7 @@ export const adminService = {
     return doctor
   },
 
-  async editDoctor(doctorId: string, data: EditDoctorDTO) {
+  async editDoctor(doctorId: string, data: UpdateProfileDoctorDTO) {
     const doctorToUpdate = await db.query.doctors.findFirst({ where: eq(doctors.id, doctorId) })
     if (!doctorToUpdate) {
       logger.error('Doctor not found for edit', { doctorId })
@@ -112,14 +112,14 @@ export const adminService = {
     }
 
     const userUpdateData: Partial<InsertUser> = {}
-    if (data.firstName !== undefined) userUpdateData.firstName = data.firstName
-    if (data.lastName !== undefined) userUpdateData.lastName = data.lastName
-    if (data.phoneNumber !== undefined) userUpdateData.phoneNumber = data.phoneNumber
-    if (data.address !== undefined) userUpdateData.address = data.address
+    if (data.user.firstName !== undefined) userUpdateData.firstName = data.user.firstName
+    if (data.user.lastName !== undefined) userUpdateData.lastName = data.user.lastName
+    if (data.user.phoneNumber !== undefined) userUpdateData.phoneNumber = data.user.phoneNumber
+    if (data.user.address !== undefined) userUpdateData.address = data.user.address
 
     const doctorUpdateData: Partial<InsertDoctor> = {}
-    if (data.specialization !== undefined) doctorUpdateData.specialization = data.specialization
-    if (data.active !== undefined) doctorUpdateData.active = data.active
+    if (data.doctor.specialization !== undefined) doctorUpdateData.specialization = data.doctor.specialization
+    if (data.doctor.active !== undefined) doctorUpdateData.active = data.doctor.active
 
     if (Object.keys(userUpdateData).length === 0 && Object.keys(doctorUpdateData).length === 0) {
       logger.info('No changes provided for doctor edit', { doctorId })

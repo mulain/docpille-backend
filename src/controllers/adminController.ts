@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'
-import { uuidSchema, createDoctorSchema, editDoctorSchema } from '@m-oss/types'
+import { uuidSchema, createDoctorSchema, updateProfileDoctorSchema } from '@m-oss/types'
 
 // local imports
 import { adminService } from '../services/adminService'
@@ -25,7 +25,7 @@ export const adminController = {
 
   async editDoctor(req: Request, res: Response) {
     const id = uuidSchema.parse(req.params.id)
-    const data = editDoctorSchema.parse(req.body)
+    const data = updateProfileDoctorSchema.parse(req.body)
     const doctor = await adminService.editDoctor(id, data)
     res.status(200).json({ doctor })
   },

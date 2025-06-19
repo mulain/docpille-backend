@@ -1,8 +1,9 @@
 import { Request, Response } from 'express'
-import { updateProfileSchema } from '@m-oss/types'
+import { updateProfileDoctorSchema, updateProfilePatientSchema } from '@m-oss/types'
 
 // local imports
 import { userService } from '../services/userService'
+import { BadRequestError } from '../utils/errors'
 
 export const userController = {
   async getCurrentUser(req: Request, res: Response) {
@@ -11,9 +12,19 @@ export const userController = {
   },
 
   async updateProfile(req: Request, res: Response) {
-    const data = updateProfileSchema.parse(req.body)
-    const user = await userService.updateProfile(req.user!.id, data)
-    res.json({ user })
+    if (req.user!.role === 'PATIENT') {
+      const data = updateProfilePatientSchema.parse(req.body)
+      const user = await userService.updateProfilePatient(req.user!.id, data)
+      
+      res.json({ user })
+
+    } else if (req.user!.role === 'DOCTOR') {
+      const data = updateProfileDoctorSchema.parse(req.body)
+      const user = await userService.updateProfileDoctor(req.user!.id, data)
+      
+      res.json({ user })
+    }
+    throw new BadRequestError('Invalid user role, Admin not implemented yet')
   },
 
   // TODO: Implement delete user

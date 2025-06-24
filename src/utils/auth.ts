@@ -46,6 +46,10 @@ export function prepareUserResponse(user: SelectUser) {
     email: user.email,
     firstName: user.firstName,
     lastName: user.lastName,
+    dateOfBirth: user.dateOfBirth,
+    gender: user.gender,
+    phoneNumber: user.phoneNumber,
+    address: user.address,
     role: user.role,
   }
 }

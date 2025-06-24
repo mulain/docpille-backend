@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 // local imports
 import { db } from '../db'
 import { doctors, users } from '../db/schema'
-import { ForbiddenError } from '../utils/errors'
+import { ForbiddenError, NotFoundError } from '../utils/errors'
 
 export const doctorService = {
   async assertIsDoctor(userId: string) {
@@ -17,9 +17,9 @@ export const doctorService = {
 
     return doctor
   },
-  
+
   async getAllDoctors() {
-    const result = await db
+    const allDoctors = await db
       .select({
         id: doctors.id,
         firstName: users.firstName,
@@ -34,11 +34,11 @@ export const doctorService = {
       .innerJoin(users, eq(doctors.userId, users.id))
       .orderBy(users.lastName, users.firstName)
 
-    return result
+    return allDoctors
   },
 
   async getActiveDoctors() {
-    const result = await db
+    const activeDoctors = await db
       .select({
         id: doctors.id,
         firstName: users.firstName,
@@ -50,6 +50,24 @@ export const doctorService = {
       .where(eq(doctors.active, true))
       .orderBy(users.lastName, users.firstName)
 
-    return result
+    return activeDoctors
+  },
+
+  async getDoctorByUserId(userId: string) {
+    const doctor = await db.query.doctors.findFirst({
+      where: eq(doctors.userId, userId),
+      columns: {
+        id: true,
+        specialization: true,
+        active: true,
+      },
+    })
+      
+
+    if (!doctor) {
+      throw new NotFoundError('Doctor not found')
+    }
+
+    return doctor
   },
 }

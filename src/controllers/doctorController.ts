@@ -13,4 +13,9 @@ export const doctorController = {
     const doctors = await doctorService.getActiveDoctors()
     res.status(200).json({ doctors })
   },
+
+  async getCurrentDoctor(req: Request, res: Response) {
+    const doctor = await doctorService.getDoctorByUserId(req.user!.id)
+    res.status(200).json({ doctor })
+  },
 }

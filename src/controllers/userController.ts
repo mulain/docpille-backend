@@ -16,14 +16,16 @@ export const userController = {
       const data = updateProfilePatientSchema.parse(req.body)
       const user = await userService.updateProfilePatient(req.user!.id, data)
       
-      res.json({ user })
-
-    } else if (req.user!.role === 'DOCTOR') {
+      return res.json({ user })
+    } 
+    
+    if (req.user!.role === 'DOCTOR') {
       const data = updateProfileDoctorSchema.parse(req.body)
       const user = await userService.updateProfileDoctor(req.user!.id, data)
       
-      res.json({ user })
+      return res.json({ user })
     }
+
     throw new BadRequestError('Invalid user role, Admin not implemented yet')
   },
 

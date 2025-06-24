@@ -16,3 +16,6 @@
 - clean up error handler
 
 - make authorizedRequest
+
+- prepareUserResponse: give it a Type (PublicUser)
+  - add age? compare to types used 

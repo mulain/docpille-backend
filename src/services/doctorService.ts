@@ -4,6 +4,8 @@ import { eq } from 'drizzle-orm'
 import { db } from '../db'
 import { doctors, users } from '../db/schema'
 import { ForbiddenError, NotFoundError } from '../utils/errors'
+import { UpdateDoctorDTO } from '@m-oss/types'
+import { prepareDoctorResponse } from '../utils/helpers'
 
 export const doctorService = {
   async assertIsDoctor(userId: string) {
@@ -62,12 +64,25 @@ export const doctorService = {
         active: true,
       },
     })
-      
 
     if (!doctor) {
       throw new NotFoundError('Doctor not found')
     }
 
     return doctor
+  },
+
+  async updateDoctorFields(userId: string, data: UpdateDoctorDTO) {
+    const [updatedDoctor] = await db
+      .update(doctors)
+      .set(data)
+      .where(eq(doctors.userId, userId))
+      .returning()
+
+    if (!updatedDoctor) {
+      throw new NotFoundError('Doctor not found')
+    }
+
+    return prepareDoctorResponse(updatedDoctor)
   },
 }

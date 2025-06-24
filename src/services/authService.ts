@@ -3,13 +3,8 @@ import { eq } from 'drizzle-orm'
 // local imports
 import { db } from '../db'
 import { users } from '../db/schema'
-import {
-  generateToken,
-  hashPassword,
-  comparePasswords,
-  generateRandomToken,
-  prepareUserResponse,
-} from '../utils/auth'
+import { generateToken, hashPassword, comparePasswords, generateRandomToken } from '../utils/auth'
+import { prepareUserResponse } from '../utils/helpers'
 import { logger } from '../utils/logger'
 import {
   UnauthorizedError,

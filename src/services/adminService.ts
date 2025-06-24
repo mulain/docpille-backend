@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import crypto from 'crypto'
-import { CreateDoctorDTO, UpdateProfileDoctorDTO } from '@m-oss/types'
+import { CreateDoctorDTO, UpdateDoctorDTO } from '@m-oss/types'
 
 // local imports
 import { hashPassword, generateRandomToken } from '../utils/auth'
@@ -104,14 +104,18 @@ export const adminService = {
     return doctor
   },
 
-  async editDoctor(doctorId: string, data: UpdateProfileDoctorDTO) {
+  async editDoctor(doctorId: string, data: UpdateDoctorDTO) {
     const doctorToUpdate = await db.query.doctors.findFirst({ where: eq(doctors.id, doctorId) })
     if (!doctorToUpdate) {
       logger.error('Doctor not found for edit', { doctorId })
       throw new NotFoundError('Doctor not found')
     }
 
-    const userUpdateData: Partial<InsertUser> = {}
+    console.log(data)
+    console.log('not implemented')
+    return doctorToUpdate
+
+  /*   const userUpdateData: Partial<InsertUser> = {}
     if (data.user.firstName !== undefined) userUpdateData.firstName = data.user.firstName
     if (data.user.lastName !== undefined) userUpdateData.lastName = data.user.lastName
     if (data.user.phoneNumber !== undefined) userUpdateData.phoneNumber = data.user.phoneNumber
@@ -143,6 +147,6 @@ export const adminService = {
     })
 
     logger.info('Doctor edited', { doctorId })
-    return finalDoctor
+    return finalDoctor */
   },
 }

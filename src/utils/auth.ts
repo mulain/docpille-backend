@@ -6,7 +6,6 @@ import crypto from 'crypto'
 import config from '../config/config'
 import { userRoleEnum } from '../db/schema'
 import { JwtPayload } from '../types/jwtPayload'
-import { SelectUser } from '../types/user'
 
 const SALT_ROUNDS = 10
 
@@ -38,18 +37,4 @@ export function generateToken(
 
 export function verifyToken(token: string): JwtPayload {
   return jwt.verify(token, config.jwtSecret) as JwtPayload
-}
-
-export function prepareUserResponse(user: SelectUser) {
-  return {
-    id: user.id,
-    email: user.email,
-    firstName: user.firstName,
-    lastName: user.lastName,
-    dateOfBirth: user.dateOfBirth,
-    gender: user.gender,
-    phoneNumber: user.phoneNumber,
-    address: user.address,
-    role: user.role,
-  }
 }

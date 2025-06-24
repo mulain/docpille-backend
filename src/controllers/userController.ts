@@ -1,9 +1,13 @@
 import { Request, Response } from 'express'
-import { updateProfileDoctorSchema, updateProfilePatientSchema } from '@m-oss/types'
+import {
+  cleanedUpdateIdentitySchema,
+  cleanedUpdateContactSchema,
+  cleanedUpdateDoctorSchema,
+} from '@m-oss/types'
 
 // local imports
 import { userService } from '../services/userService'
-import { BadRequestError } from '../utils/errors'
+import { doctorService } from '../services/doctorService'
 
 export const userController = {
   async getCurrentUser(req: Request, res: Response) {
@@ -11,22 +15,22 @@ export const userController = {
     res.json({ user })
   },
 
-  async updateProfile(req: Request, res: Response) {
-    if (req.user!.role === 'PATIENT') {
-      const data = updateProfilePatientSchema.parse(req.body)
-      const user = await userService.updateProfilePatient(req.user!.id, data)
-      
-      return res.json({ user })
-    } 
-    
-    if (req.user!.role === 'DOCTOR') {
-      const data = updateProfileDoctorSchema.parse(req.body)
-      const user = await userService.updateProfileDoctor(req.user!.id, data)
-      
-      return res.json({ user })
-    }
+  async updateIdentityFields(req: Request, res: Response) {
+    const data = cleanedUpdateIdentitySchema.parse(req.body)
+    const user = await userService.updateIdentityFields(req.user!.id, data)
+    res.json({ user })
+  },
 
-    throw new BadRequestError('Invalid user role, Admin not implemented yet')
+  async updateContactFields(req: Request, res: Response) {
+    const data = cleanedUpdateContactSchema.parse(req.body)
+    const user = await userService.updateContactFields(req.user!.id, data)
+    res.json({ user })
+  },
+
+  async updateDoctorFields(req: Request, res: Response) {
+    const data = cleanedUpdateDoctorSchema.parse(req.body)
+    const doctor = await doctorService.updateDoctorFields(req.user!.id, data)
+    res.json({ doctor })
   },
 
   // TODO: Implement delete user

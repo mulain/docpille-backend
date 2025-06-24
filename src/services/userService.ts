@@ -1,12 +1,12 @@
 import { eq } from 'drizzle-orm'
-import { UpdateProfileDoctorDTO, UpdateProfilePatientDTO } from '@m-oss/types'
+import { UpdateContactDTO, UpdateIdentityDTO } from '@m-oss/types'
 
 // local imports
 import { db } from '../db'
-import { users, doctors } from '../db/schema'
-import { prepareUserResponse, hashPassword } from '../utils/auth'
-import { stripUndefined } from '../utils/helpers'
+import { users } from '../db/schema'
+import { prepareUserResponse } from '../utils/helpers'
 import { NotFoundError } from '../utils/errors'
+import { hashPassword } from '../utils/auth'
 
 export const userService = {
   async getCurrentUser(userId: string) {
@@ -21,52 +21,35 @@ export const userService = {
     return prepareUserResponse(user)
   },
 
-  async updateProfilePatient(userId: string, data: UpdateProfilePatientDTO) {
+  async updateIdentityFields(userId: string, data: UpdateIdentityDTO) {
+    const userUpdate: Record<string, any> = { ...data }
+
+    if (typeof data.password === 'string') {
+      userUpdate.passwordHash = await hashPassword(data.password)
+      delete userUpdate.password
+    }
+
     const [updatedUser] = await db
       .update(users)
-      .set({
-        ...data,
-        updatedAt: new Date(),
-      })
+      .set(userUpdate)
       .where(eq(users.id, userId))
       .returning()
+
+    if (!updatedUser) {
+      throw new NotFoundError('User not found')
+    }
 
     return prepareUserResponse(updatedUser)
   },
 
-  async updateProfileDoctor(userId: string, data: UpdateProfileDoctorDTO) {
-    const user = await db.transaction(async tx => {
-      if (data.user) {
-        const userUpdate: Record<string, any> = {
-          ...stripUndefined(data.user),
-        }
+  async updateContactFields(userId: string, data: UpdateContactDTO) {
+    const [updatedUser] = await db.update(users).set(data).where(eq(users.id, userId)).returning()
 
-        if (data.user.password) {
-          userUpdate.passwordHash = await hashPassword(data.user.password)
-          delete userUpdate.password
-        }
+    if (!updatedUser) {
+      throw new NotFoundError('User not found')
+    }
 
-        await tx.update(users).set(userUpdate).where(eq(users.id, userId))
-      }
-
-      if (data.doctor) {
-        const doctorUpdate = {
-          ...stripUndefined(data.doctor),
-        }
-
-        await tx.update(doctors).set(doctorUpdate).where(eq(doctors.userId, userId))
-      }
-
-      const updatedUser = await db.query.users.findFirst({ where: eq(users.id, userId) })
-
-      if (!updatedUser) {
-        throw new NotFoundError('User not found')
-      }
-
-      return updatedUser
-    })
-
-    return prepareUserResponse(user)
+    return prepareUserResponse(updatedUser)
   },
 
   // TODO: Implement delete user

@@ -10,10 +10,13 @@ const router = Router()
 // Get all doctors (admin only)
 router.get('/', authenticate, requireAdmin, asyncHandler(doctorController.getAllDoctors))
 
-// Get active doctors (public)
+// Get active doctors
 router.get('/active', authenticate, asyncHandler(doctorController.getActiveDoctors))
 
 // Get doctor of authenticated user
 router.get('/me', authenticate, requireDoctor, asyncHandler(doctorController.getCurrentDoctor))
+
+// Get a single doctor by ID (admin only)
+router.get('/:id', authenticate, requireAdmin, asyncHandler(doctorController.getDoctorByDoctorId))
 
 export default router

@@ -72,6 +72,32 @@ export const doctorService = {
     return doctor
   },
 
+  async getDoctorByDoctorId(doctorId: string) {
+    const [doctor] = await db
+      .select({
+        id: doctors.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+        dateOfBirth: users.dateOfBirth,
+        gender: users.gender,
+        specialization: doctors.specialization,
+        phoneNumber: users.phoneNumber,
+        address: users.address,
+        active: doctors.active,
+      })
+      .from(doctors)
+      .innerJoin(users, eq(doctors.userId, users.id))
+      .where(eq(doctors.id, doctorId))
+      .limit(1)
+
+    if (!doctor) {
+      throw new NotFoundError('Doctor not found')
+    }
+
+    return doctor
+  },
+
   async updateDoctorFields(userId: string, data: UpdateDoctorDTO) {
     const [updatedDoctor] = await db
       .update(doctors)

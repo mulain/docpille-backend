@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 import crypto from 'crypto'
-import { CreateDoctorDTO, UpdateDoctorDTO } from '@m-oss/types'
+import { CreateDoctorDTO, UpdateProfileDoctorDTO } from '@m-oss/types'
 
 // local imports
 import { hashPassword, generateRandomToken } from '../utils/auth'
@@ -24,7 +24,7 @@ export const adminService = {
     if (user.role !== 'ADMIN') {
       throw new ForbiddenError('User is not an admin')
     }
-    
+
     return user
   },
 
@@ -104,26 +104,28 @@ export const adminService = {
     return doctor
   },
 
-  async editDoctor(doctorId: string, data: UpdateDoctorDTO) {
+  async editDoctor(doctorId: string, data: UpdateProfileDoctorDTO) {
     const doctorToUpdate = await db.query.doctors.findFirst({ where: eq(doctors.id, doctorId) })
     if (!doctorToUpdate) {
       logger.error('Doctor not found for edit', { doctorId })
       throw new NotFoundError('Doctor not found')
     }
 
-    console.log(data)
-    console.log('not implemented')
-    return doctorToUpdate
-
-  /*   const userUpdateData: Partial<InsertUser> = {}
-    if (data.user.firstName !== undefined) userUpdateData.firstName = data.user.firstName
-    if (data.user.lastName !== undefined) userUpdateData.lastName = data.user.lastName
-    if (data.user.phoneNumber !== undefined) userUpdateData.phoneNumber = data.user.phoneNumber
-    if (data.user.address !== undefined) userUpdateData.address = data.user.address
+    const userUpdateData: Partial<InsertUser> = {}
+    if (data.identity?.firstName !== undefined) userUpdateData.firstName = data.identity.firstName
+    if (data.identity?.lastName !== undefined) userUpdateData.lastName = data.identity.lastName
+    if (data.identity?.email !== undefined) userUpdateData.email = data.identity.email
+    if (data.identity?.dateOfBirth !== undefined)
+      userUpdateData.dateOfBirth = data.identity.dateOfBirth
+    if (data.identity?.gender !== undefined) userUpdateData.gender = data.identity.gender
+    if (data.contact?.phoneNumber !== undefined)
+      userUpdateData.phoneNumber = data.contact.phoneNumber
+    if (data.contact?.address !== undefined) userUpdateData.address = data.contact.address
 
     const doctorUpdateData: Partial<InsertDoctor> = {}
-    if (data.doctor.specialization !== undefined) doctorUpdateData.specialization = data.doctor.specialization
-    if (data.doctor.active !== undefined) doctorUpdateData.active = data.doctor.active
+    if (data.doctor?.specialization !== undefined)
+      doctorUpdateData.specialization = data.doctor.specialization
+    if (data.doctor?.active !== undefined) doctorUpdateData.active = data.doctor.active
 
     if (Object.keys(userUpdateData).length === 0 && Object.keys(doctorUpdateData).length === 0) {
       logger.info('No changes provided for doctor edit', { doctorId })
@@ -147,6 +149,6 @@ export const adminService = {
     })
 
     logger.info('Doctor edited', { doctorId })
-    return finalDoctor */
+    return finalDoctor
   },
 }

@@ -1,4 +1,5 @@
 import { eq } from 'drizzle-orm'
+import type { DoctorFull } from '@m-oss/types'
 
 // local imports
 import { db } from '../db'
@@ -72,7 +73,7 @@ export const doctorService = {
     return doctor
   },
 
-  async getDoctorByDoctorId(doctorId: string) {
+  async getDoctorByDoctorId(doctorId: string): Promise<DoctorFull> {
     const [doctor] = await db
       .select({
         id: doctors.id,
@@ -95,7 +96,7 @@ export const doctorService = {
       throw new NotFoundError('Doctor not found')
     }
 
-    return doctor
+    return doctor as DoctorFull
   },
 
   async updateDoctorFields(userId: string, data: UpdateDoctorDTO) {

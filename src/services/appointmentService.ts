@@ -2,10 +2,10 @@ import { and, eq, isNull, gte, lte, lt, gt, or, sql } from 'drizzle-orm'
 import {
   CreateSlotsDTO,
   DoctorSlot,
-  PatientSlot,
   EditSlotDoctorDTO,
   EditSlotPatientDTO,
   EditSlotAdminDTO,
+  BasicSlot,
 } from '@m-oss/types'
 
 // local imports
@@ -55,24 +55,22 @@ async function validateSlots(
   }
 }
 
-function normalizeSlotTimestamps(slot: {
-  startTime: Date
-  endTime: Date
-  bookedAt?: Date | null
-  reservedUntil?: Date | null
-}) {
-  return {
-    ...slot,
-    startTime: slot.startTime.toISOString(),
-    endTime: slot.endTime.toISOString(),
-    bookedAt: slot.bookedAt?.toISOString() ?? null,
-    reservedUntil: slot.reservedUntil?.toISOString() ?? null,
-  }
+function normalizeDates<T extends Record<string, any>>(
+  obj: T
+): {
+  [K in keyof T]: T[K] extends Date ? string : T[K]
+} {
+  return Object.fromEntries(
+    Object.entries(obj).map(([key, value]) => [
+      key,
+      value instanceof Date ? value.toISOString() : value,
+    ])
+  ) as any
 }
 
 function baseSlotFields() {
   return {
-    appointmentId: appointments.id,
+    id: appointments.id,
     startTime: appointments.startTime,
     endTime: appointments.endTime,
     bookedAt: appointments.bookedAt,
@@ -93,7 +91,11 @@ function baseSlotFields() {
 }
 
 export const appointmentService = {
-  async availableSlotsByDoctorId(doctorId: string, after: Date, before: Date) {
+  async availableSlotsByDoctorId(
+    doctorId: string,
+    after: Date,
+    before: Date
+  ): Promise<BasicSlot[]> {
     const now = new Date()
     const maxBefore = new Date()
     maxBefore.setUTCFullYear(now.getUTCFullYear() + 1)
@@ -106,7 +108,7 @@ export const appointmentService = {
       throw new BadRequestError('Max query range is 1 year from current date')
     }
 
-    return db.query.appointments.findMany({
+    const slots = await db.query.appointments.findMany({
       where: and(
         eq(appointments.doctorId, doctorId),
         isNull(appointments.patientId),
@@ -115,11 +117,12 @@ export const appointmentService = {
       ),
       columns: {
         id: true,
-        doctorId: true,
         startTime: true,
         endTime: true,
       },
     })
+
+    return slots.map(slot => normalizeDates(slot))
   },
 
   async createSlots(userId: string, data: CreateSlotsDTO) {
@@ -188,12 +191,12 @@ export const appointmentService = {
       )
 
     return dbSlots.map(({ patient, ...slot }) => ({
-      ...normalizeSlotTimestamps(slot),
+      ...normalizeDates(slot),
       patient: patient?.id ? patient : null,
     })) as DoctorSlot[]
   },
 
-  async getMySlotsPatient(userId: string, after: Date, before: Date): Promise<PatientSlot[]> {
+  async getMySlotsPatient(userId: string, after: Date, before: Date): Promise<BasicSlot[]> {
     const patient = await patientService.assertIsPatient(userId)
 
     const dbSlots = await db
@@ -217,7 +220,10 @@ export const appointmentService = {
         )
       )
 
-    return dbSlots.map(slot => normalizeSlotTimestamps(slot)) as PatientSlot[]
+    return dbSlots.map(slot => ({
+      ...normalizeDates(slot),
+      id: slot.id,
+    })) as BasicSlot[]
   },
 
   async bookSlot(userId: string, slotId: string) {
@@ -237,7 +243,7 @@ export const appointmentService = {
       .where(eq(appointments.id, slotId))
       .returning()
 
-    return normalizeSlotTimestamps(updatedSlot)
+    return normalizeDates(updatedSlot)
   },
 
   async cancelSlot(userId: string, slotId: string) {
@@ -257,7 +263,7 @@ export const appointmentService = {
       .where(eq(appointments.id, slotId))
       .returning()
 
-    return normalizeSlotTimestamps(updatedSlot)
+    return normalizeDates(updatedSlot)
   },
 
   async deleteSlot(userId: string, slotId: string) {
@@ -307,7 +313,7 @@ export const appointmentService = {
       .where(eq(appointments.id, slotId))
       .returning()
 
-    return normalizeSlotTimestamps(updatedSlot)
+    return normalizeDates(updatedSlot)
   },
 
   async updateSlotPatient(userId: string, slotId: string, rawData: EditSlotPatientDTO) {
@@ -329,7 +335,7 @@ export const appointmentService = {
       .where(eq(appointments.id, slotId))
       .returning()
 
-    return normalizeSlotTimestamps(updatedSlot)
+    return normalizeDates(updatedSlot)
   },
 
   async updateSlotAdmin(userId: string, slotId: string, rawData: EditSlotAdminDTO) {
@@ -351,6 +357,6 @@ export const appointmentService = {
       .where(eq(appointments.id, slotId))
       .returning()
 
-    return normalizeSlotTimestamps(updatedSlot)
+    return normalizeDates(updatedSlot)
   },
 }

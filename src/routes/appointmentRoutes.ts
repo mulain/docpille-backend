@@ -14,7 +14,7 @@ router.get(
   })
 )
 
-// List available appointments for a doctor by year and month
+// List available appointments for a doctor by date range
 router.get(
   '/available',
   authenticate,

@@ -69,6 +69,22 @@ export const authService = {
     logger.info('Password reset email sent', { email: user.email })
   },
 
+  async isPasswordResetTokenValid(token: string) {
+    const user = await db.query.users.findFirst({
+      where: eq(users.passwordResetToken, token),
+    })
+
+    if (!user) {
+      throw new InvalidPasswordResetTokenError()
+    }
+
+    if (user.passwordResetExpires && user.passwordResetExpires < new Date()) {
+      throw new ExpiredPasswordResetTokenError()
+    }
+
+    return { isValid: true }
+  },
+
   async resetPassword(token: string, newPassword: string) {
     const user = await db.query.users.findFirst({
       where: eq(users.passwordResetToken, token),

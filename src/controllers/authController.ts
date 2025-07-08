@@ -1,5 +1,6 @@
 import { Request, Response } from 'express'
 import { loginSchema, forgotPasswordSchema, resetPasswordSchema } from '@m-oss/types'
+import { z } from 'zod'
 
 // local imports
 import { authService } from '../services/authService'
@@ -41,6 +42,12 @@ export const authController = {
     const { token, password } = resetPasswordSchema.parse(req.body)
     await authService.resetPassword(token, password)
     res.json({ message: 'Password has been reset successfully' })
+  },
+
+  async isPasswordResetTokenValid(req: Request, res: Response) {
+    const { token } = z.object({ token: z.string() }).parse(req.query)
+    const isValid = await authService.isPasswordResetTokenValid(token)
+    res.json({ isValid })
   },
 
   /*   async refreshToken(req: Request, res: Response) {

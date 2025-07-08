@@ -15,6 +15,9 @@ router.post('/logout', asyncHandler(authController.logout))
 // Forgot password
 router.post('/forgot-password', asyncHandler(authController.forgotPassword))
 
+// Check if password reset token is valid
+router.get('/is-password-reset-token-valid', asyncHandler(authController.isPasswordResetTokenValid))
+
 // Reset password
 router.post('/reset-password', asyncHandler(authController.resetPassword))
 

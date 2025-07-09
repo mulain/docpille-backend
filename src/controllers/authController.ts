@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'
-import { loginSchema, forgotPasswordSchema, resetPasswordSchema } from '@m-oss/types'
+import { loginSchema, emailPayloadSchema, resetPasswordSchema } from '@m-oss/types'
 import { z } from 'zod'
 
 // local imports
@@ -31,7 +31,7 @@ export const authController = {
   },
 
   async forgotPassword(req: Request, res: Response) {
-    const { email } = forgotPasswordSchema.parse(req.body)
+    const { email } = emailPayloadSchema.parse(req.body)
     await authService.forgotPassword(email)
     res.json({
       message: 'If an account exists with this email, you will receive a password reset link',

@@ -50,7 +50,7 @@ export const appointmentController = {
   },
 
   async deleteSlot(req: Request, res: Response) {
-    const id = uuidSchema.parse(req.params)
+    const id = uuidSchema.parse(req.params.id)
     await appointmentService.deleteSlot(req.user!.id, id)
     res.status(204).send()
   },

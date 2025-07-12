@@ -93,6 +93,13 @@ export class ExpiredPasswordResetTokenError extends AppError {
   }
 }
 
+export class AlreadyHasAppointmentError extends AppError {
+  constructor(message = 'You already have an appointment with this doctor') {
+    super(409, message)
+    Object.setPrototypeOf(this, AlreadyHasAppointmentError.prototype)
+  }
+}
+
 export interface ErrorResponse {
   status: 'error' | 'fail'
   message: string

@@ -11,7 +11,12 @@ import {
 // local imports
 import { db } from '../db'
 import { appointments, doctors, users, patients } from '../db/schema'
-import { BadRequestError, ForbiddenError, NotFoundError } from '../utils/errors'
+import {
+  BadRequestError,
+  ForbiddenError,
+  NotFoundError,
+  AlreadyHasAppointmentError,
+} from '../utils/errors'
 import { doctorService } from './doctorService'
 import { patientService } from './patientService'
 import { stripUndefined } from '../utils/helpers'
@@ -235,6 +240,18 @@ export const appointmentService = {
 
     if (!slot) {
       throw new NotFoundError('Slot not found')
+    }
+
+    const existingAppointment = await db.query.appointments.findFirst({
+      where: and(
+        eq(appointments.doctorId, slot.doctorId),
+        eq(appointments.patientId, patient.id),
+        gte(appointments.startTime, new Date()) // Only check future appointments
+      ),
+    })
+
+    if (existingAppointment) {
+      throw new AlreadyHasAppointmentError()
     }
 
     const [updatedSlot] = await db

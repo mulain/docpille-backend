@@ -242,15 +242,17 @@ export const appointmentService = {
       throw new NotFoundError('Slot not found')
     }
 
-    const existingAppointment = await db.query.appointments.findFirst({
+    await doctorService.assertIsDoctorActive(slot.doctorId)
+
+    const existingFutureAppointment = await db.query.appointments.findFirst({
       where: and(
         eq(appointments.doctorId, slot.doctorId),
         eq(appointments.patientId, patient.id),
-        gte(appointments.startTime, new Date()) // Only check future appointments
+        gte(appointments.startTime, new Date())
       ),
     })
 
-    if (existingAppointment) {
+    if (existingFutureAppointment) {
       throw new AlreadyHasAppointmentError()
     }
 

@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import type { DoctorFull } from '@m-oss/types'
 
 // local imports
@@ -21,6 +21,18 @@ export const doctorService = {
     return doctor
   },
 
+  async assertIsDoctorActive(doctorId: string) {
+    const doctor = await db.query.doctors.findFirst({
+      where: and(eq(doctors.id, doctorId), eq(doctors.active, true)),
+    })
+
+    if (!doctor) {
+      throw new ForbiddenError('Doctor is not active')
+    }
+
+    return doctor
+  },
+
   async getAllDoctors() {
     const allDoctors = await db
       .select({
@@ -32,6 +44,8 @@ export const doctorService = {
         phoneNumber: users.phoneNumber,
         address: users.address,
         active: doctors.active,
+        dateOfBirth: users.dateOfBirth,
+        gender: users.gender,
       })
       .from(doctors)
       .innerJoin(users, eq(doctors.userId, users.id))

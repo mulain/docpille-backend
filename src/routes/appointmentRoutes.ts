@@ -42,6 +42,13 @@ router.put('/:id', authenticate, asyncHandler(appointmentController.updateSlot))
 // Book an appointment by ID
 router.post('/:id/book', authenticate, asyncHandler(appointmentController.bookSlot))
 
+// Book an appointment by ID with details
+router.post(
+  '/:id/book-with-details',
+  authenticate,
+  asyncHandler(appointmentController.bookSlotWithDetails)
+)
+
 // Cancel an appointment by ID
 router.post('/:id/cancel', authenticate, asyncHandler(appointmentController.cancelSlot))
 

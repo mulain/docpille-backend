@@ -43,6 +43,13 @@ export const appointmentController = {
     res.status(204).send()
   },
 
+  async bookSlotWithDetails(req: Request, res: Response) {
+    const id = uuidSchema.parse(req.params.id)
+    const data = editSlotPatientSchema.parse(req.body)
+    const slot = await appointmentService.bookSlotWithDetails(req.user!.id, id, data)
+    res.status(201).json({ slot })
+  },
+
   async cancelSlot(req: Request, res: Response) {
     const id = uuidSchema.parse(req.params.id)
     await appointmentService.cancelSlot(req.user!.id, id)

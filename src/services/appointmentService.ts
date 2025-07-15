@@ -265,6 +265,44 @@ export const appointmentService = {
     return normalizeDates(updatedSlot)
   },
 
+  async bookSlotWithDetails(userId: string, slotId: string, data: EditSlotPatientDTO) {
+    const patient = await patientService.assertIsPatient(userId)
+
+    const slot = await db.query.appointments.findFirst({
+      where: and(eq(appointments.id, slotId), isNull(appointments.patientId)),
+    })
+
+    if (!slot) {
+      throw new NotFoundError('Slot not found')
+    }
+
+    await doctorService.assertIsDoctorActive(slot.doctorId)
+
+    const existingFutureAppointment = await db.query.appointments.findFirst({
+      where: and(
+        eq(appointments.doctorId, slot.doctorId),
+        eq(appointments.patientId, patient.id),
+        gte(appointments.startTime, new Date())
+      ),
+    })
+
+    if (existingFutureAppointment) {
+      throw new AlreadyHasAppointmentError()
+    }
+
+    const [updatedSlot] = await db
+      .update(appointments)
+      .set({
+        patientId: patient.id,
+        bookedAt: new Date(),
+        ...data,
+      })
+      .where(eq(appointments.id, slotId))
+      .returning()
+
+    return normalizeDates(updatedSlot)
+  },
+
   async cancelSlot(userId: string, slotId: string) {
     const patient = await patientService.assertIsPatient(userId)
 

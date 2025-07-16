@@ -14,6 +14,8 @@ const envSchema = z.object({
   SMTP_USER: z.string(),
   SMTP_PASS: z.string(),
   FROM_EMAIL: z.string().email(),
+  ETHEREAL_USER: z.string(),
+  ETHEREAL_PASS: z.string(),
 })
 
 const parsedEnv = envSchema.parse(process.env)
@@ -30,6 +32,10 @@ const config = {
     user: parsedEnv.SMTP_USER,
     pass: parsedEnv.SMTP_PASS,
     fromEmail: parsedEnv.FROM_EMAIL,
+  },
+  etherealEmail: {
+    user: parsedEnv.ETHEREAL_USER,
+    pass: parsedEnv.ETHEREAL_PASS,
   },
 }
 

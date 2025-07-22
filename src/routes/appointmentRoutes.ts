@@ -2,6 +2,7 @@ import { Router } from 'express'
 import { asyncHandler } from '../middleware/asyncHandler'
 import { authenticate, requireDoctor } from '../middleware/authGuard'
 import { appointmentController } from '../controllers/appointmentController'
+import { appointmentService } from '../services/appointmentService'
 
 const router = Router()
 
@@ -24,13 +25,12 @@ router.get(
 // List a user's own appointments
 router.get('/me', authenticate, asyncHandler(appointmentController.getMySlots))
 
-// Get appointment by ID
+// Get appointment by ID for doctor
 router.get(
-  '/:id',
-  asyncHandler(async (req, res) => {
-    // TODO: Implement get appointment by id
-    res.status(501).json({ message: 'Get appointment not implemented' })
-  })
+  '/:id/doctor',
+  authenticate,
+  requireDoctor,
+  asyncHandler(appointmentController.getDoctorSlotById)
 )
 
 // Create one or more appointments

@@ -6,6 +6,7 @@ import {
   EditSlotPatientDTO,
   EditSlotAdminDTO,
   BasicSlot,
+  PatientSlot,
 } from '@m-oss/types'
 
 // local imports
@@ -96,6 +97,51 @@ function baseSlotFields() {
 }
 
 export const appointmentService = {
+  async getDoctorSlotById(slotId: string): Promise<DoctorSlot> {
+    const [dbSlot] = await db
+      .select({
+        ...baseSlotFields(),
+        doctorNotes: appointments.doctorNotes,
+        patient: {
+          id: patients.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email,
+          phoneNumber: users.phoneNumber,
+          address: users.address,
+          dateOfBirth: users.dateOfBirth,
+          gender: users.gender,
+          age: sql<number | null>`
+            CASE WHEN ${users.dateOfBirth} IS NOT NULL
+              THEN EXTRACT(YEAR FROM AGE(CURRENT_DATE, ${users.dateOfBirth}::timestamp))::int
+            ELSE NULL END
+          `.as('age'),
+        },
+        doctor: {
+          id: doctors.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          specialization: doctors.specialization,
+        },
+      })
+      .from(appointments)
+      .leftJoin(patients, eq(appointments.patientId, patients.id))
+      .leftJoin(doctors, eq(appointments.doctorId, doctors.id))
+      .leftJoin(users, eq(patients.userId, users.id))
+      .where(eq(appointments.id, slotId))
+      .limit(1)
+
+    if (!dbSlot) {
+      throw new NotFoundError('Slot not found')
+    }
+
+    const { patient,  ...slot } = dbSlot
+    return {
+      ...normalizeDates(slot),
+      patient: patient?.id ? patient : null,
+    } as DoctorSlot
+  },
+
   async availableSlotsByDoctorId(
     doctorId: string,
     after: Date,
@@ -201,7 +247,7 @@ export const appointmentService = {
     })) as DoctorSlot[]
   },
 
-  async getMySlotsPatient(userId: string, after: Date, before: Date): Promise<BasicSlot[]> {
+  async getMySlotsPatient(userId: string, after: Date, before: Date): Promise<PatientSlot[]> {
     const patient = await patientService.assertIsPatient(userId)
 
     const dbSlots = await db
@@ -228,7 +274,7 @@ export const appointmentService = {
     return dbSlots.map(slot => ({
       ...normalizeDates(slot),
       id: slot.id,
-    })) as BasicSlot[]
+    })) as PatientSlot[]
   },
 
   async bookSlot(userId: string, slotId: string) {

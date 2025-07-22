@@ -13,7 +13,13 @@ import {
 import { appointmentService } from '../services/appointmentService'
 import { ForbiddenError } from '../utils/errors'
 
-export const appointmentController = {
+export const  appointmentController = {
+  async getDoctorSlotById(req: Request, res: Response) {
+    const { id } = req.params
+    const slot = await appointmentService.getDoctorSlotById(id)
+    res.json({ slot })
+  },
+
   async getAvailableSlotsByDoctorId(req: Request, res: Response) {
     const { doctorId, after, before } = doctorTimeRangeSchema.parse(req.query)
     const slots = await appointmentService.availableSlotsByDoctorId(doctorId, after, before)
